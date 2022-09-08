@@ -4,40 +4,40 @@ using UnityEngine;
 
 public class CharacterBase : MonoBehaviour
 {
-    private Transform _transform;
-    private CharacterController _characterController;
+    protected Transform _transform;
+    protected CharacterController _characterController;
 
-    private Vector3 _velocity;
+    protected Vector3 _velocity;
     public Vector3 Velocity { get => _velocity; }
     
     [Header("Movement Settings")]
     [SerializeField]
-    private float _movementSpeed = 5f;
+    protected float _movementSpeed = 5f;
 
     [Header("Dash Settings")]
     [SerializeField]
-    private float _dashMaxSpeed = 10f;
+    protected float _dashMaxSpeed = 10f;
 
     [SerializeField]
-    private float _dashLeadTime = 1f;
+    protected float _dashLeadTime = 1f;
 
     [Header("Gravity Settings")]
     private float _gravity = 9.8f;
     private float _currentVerticalSpeed;
 
-    private void Start()
+    protected virtual void Start()
     {
         _transform = GetComponent<Transform>();
         _characterController = GetComponent<CharacterController>();
     }
 
-    private void Update()
+    protected virtual void Update()
     {
         HandleMovement();
         HandleDash();
     }
 
-    private void HandleGravity()
+    protected void HandleGravity()
     {
         if (_characterController.isGrounded)
         {
@@ -49,7 +49,7 @@ public class CharacterBase : MonoBehaviour
         _velocity.y = _currentVerticalSpeed;
     }
 
-    private void HandleMovement()
+    protected virtual void HandleMovement()
     {
         _velocity = Vector3.zero;
 
