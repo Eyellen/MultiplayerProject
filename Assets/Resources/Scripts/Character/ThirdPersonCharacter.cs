@@ -13,23 +13,20 @@ public class ThirdPersonCharacter : CharacterBase
         _cameraTransform = Camera.main.transform;
     }
 
-    protected override void HandleMovement()
+    protected override void Move(Vector3 axis)
     {
-        _velocity = Vector3.zero;
+        if (axis.magnitude < 0.1) return;
 
-        HandleGravity();
+        // Rotating character
+        float targetAngle = Mathf.Atan2(axis.x, axis.z) *
+            Mathf.Rad2Deg + _cameraTransform.eulerAngles.y;
+        _transform.rotation = Quaternion.Euler(0, targetAngle, 0);
 
-        if (PlayerInput.MovementVector.magnitude >= 0.1)
-        {
-            float targetAngle = Mathf.Atan2(PlayerInput.MovementVector.x, PlayerInput.MovementVector.z) *
-                Mathf.Rad2Deg + _cameraTransform.eulerAngles.y;
+        // Rotating movement direction
+        Vector3 moveDirection = _transform.rotation * Vector3.forward;
+        _velocity = _movementSpeed * moveDirection;
 
-            _transform.rotation = Quaternion.Euler(0, targetAngle, 0);
-
-            Vector3 moveDirection = _transform.rotation * Vector3.forward;
-            _velocity += _movementSpeed * moveDirection;
-        }
-
-        _characterController.Move(_velocity * Time.deltaTime);
+        // Reassign vertical speed
+        _velocity.y = CurrentVerticalSpeed;
     }
 }
