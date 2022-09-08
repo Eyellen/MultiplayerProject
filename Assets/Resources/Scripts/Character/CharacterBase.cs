@@ -23,7 +23,7 @@ public class CharacterBase : MonoBehaviour
 
     [Header("Gravity Settings")]
     private float _gravity = 9.8f;
-    private float _currentVerticalSpeed;
+    protected float CurrentVerticalSpeed { get; private set; }
 
     protected virtual void Start()
     {
@@ -33,32 +33,40 @@ public class CharacterBase : MonoBehaviour
 
     protected virtual void Update()
     {
-        HandleMovement();
+        UpdateMovement();
         HandleDash();
+    }
+
+    private void UpdateMovement()
+    {
+        _velocity = Vector3.zero;
+
+        Move(PlayerInput.MovementVector);
+        HandleGravity();
+
+        _characterController.Move(_velocity * Time.deltaTime);
     }
 
     protected void HandleGravity()
     {
         if (_characterController.isGrounded)
         {
-            _currentVerticalSpeed = 0;
+            CurrentVerticalSpeed = 0;
             return;
         }
 
-        _currentVerticalSpeed -= _gravity * Time.deltaTime;
-        _velocity.y = _currentVerticalSpeed;
+        CurrentVerticalSpeed -= _gravity * Time.deltaTime;
+        _velocity.y = CurrentVerticalSpeed;
     }
 
-    protected virtual void HandleMovement()
+    protected virtual void Move(Vector3 axis)
     {
-        _velocity = Vector3.zero;
+        if (axis.magnitude < 0.1) return;
 
-        HandleGravity();
+        _velocity = _movementSpeed * (_transform.rotation * axis);
 
-        if (PlayerInput.MovementVector.magnitude >= 0.1)
-            _velocity += _movementSpeed * (_transform.rotation * PlayerInput.MovementVector);
-
-        _characterController.Move(_velocity * Time.deltaTime);
+        // Reassign vertical speed
+        _velocity.y = CurrentVerticalSpeed;
     }
 
     private void HandleDash()
