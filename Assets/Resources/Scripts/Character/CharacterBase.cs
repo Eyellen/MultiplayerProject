@@ -7,6 +7,9 @@ public class CharacterBase : MonoBehaviour
     private Transform _transform;
     private CharacterController _characterController;
 
+    private Vector3 _velocity;
+    public Vector3 Velocity { get => _velocity; }
+    
     [Header("Movement Settings")]
     [SerializeField]
     private float _movementSpeed = 5f;
@@ -30,7 +33,6 @@ public class CharacterBase : MonoBehaviour
 
     private void Update()
     {
-        HandleGravity();
         HandleMovement();
         HandleDash();
     }
@@ -43,14 +45,20 @@ public class CharacterBase : MonoBehaviour
             return;
         }
 
-        _currentVerticalSpeed -= _gravity * Time.deltaTime;
-        _characterController.Move(new Vector3(0, _currentVerticalSpeed, 0) * Time.deltaTime);
+        _currentVerticalSpeed -= _gravity * (Time.deltaTime * Time.deltaTime);
+        _velocity.y = _currentVerticalSpeed;
     }
 
     private void HandleMovement()
     {
+        _velocity = Vector3.zero;
+
+        HandleGravity();
+
         if (PlayerInput.MovementVector.magnitude >= 0.1)
-            _characterController.Move(_movementSpeed * Time.deltaTime * (_transform.rotation * PlayerInput.MovementVector));
+            _velocity += _movementSpeed * Time.deltaTime * (_transform.rotation * PlayerInput.MovementVector);
+
+        _characterController.Move(_velocity);
     }
 
     private void HandleDash()
