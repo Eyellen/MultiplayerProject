@@ -45,7 +45,7 @@ public class CharacterBase : MonoBehaviour
             return;
         }
 
-        _currentVerticalSpeed -= _gravity * (Time.deltaTime * Time.deltaTime);
+        _currentVerticalSpeed -= _gravity * Time.deltaTime;
         _velocity.y = _currentVerticalSpeed;
     }
 
@@ -56,9 +56,9 @@ public class CharacterBase : MonoBehaviour
         HandleGravity();
 
         if (PlayerInput.MovementVector.magnitude >= 0.1)
-            _velocity += _movementSpeed * Time.deltaTime * (_transform.rotation * PlayerInput.MovementVector);
+            _velocity += _movementSpeed * (_transform.rotation * PlayerInput.MovementVector);
 
-        _characterController.Move(_velocity);
+        _characterController.Move(_velocity * Time.deltaTime);
     }
 
     private void HandleDash()
