@@ -1,7 +1,7 @@
 using UnityEngine;
 using Mirror;
 
-public class CameraBase : NetworkBehaviour
+public class CameraBase : MonoBehaviour
 {
 #if UNITY_EDITOR || DEBUG_BUILD
     [SerializeField]
