@@ -1,62 +1,65 @@
 using UnityEngine;
 
-public class ThirdPersonCamera : CameraBase
+namespace GameEngine.Core
 {
-    [field: Header("Third Person Camera Settings")]
-
-    [SerializeField]
-    private Transform _target;
-
-    [SerializeField]
-    private Vector3 _cameraOffset = new Vector3(0, 0.4f, -5);
-    private Vector3 _currentCameraOffset;
-
-    [SerializeField]
-    private float _cameraThickness = 0.25f;
-
-    private int _layer;
-
-    protected override void Awake()
+    public class ThirdPersonCamera : CameraBase
     {
-        base.Awake();
+        [field: Header("Third Person Camera Settings")]
 
-        _layer = 1 << LayerMask.NameToLayer("Player");
-    }
+        [SerializeField]
+        private Transform _target;
 
-    protected override void LateUpdate()
-    {
-        base.LateUpdate();
+        [SerializeField]
+        private Vector3 _cameraOffset = new Vector3(0, 0.4f, -5);
+        private Vector3 _currentCameraOffset;
 
-        HandleOffsetMagnitude();
-        HandleFollowing();
-    }
+        [SerializeField]
+        private float _cameraThickness = 0.25f;
 
-    protected override void HandleRotation()
-    {
-        base.HandleRotation();
+        private int _layer;
 
-        _currentCameraOffset = _transform.rotation * _cameraOffset;
-    }
+        protected override void Awake()
+        {
+            base.Awake();
 
-    private void HandleOffsetMagnitude()
-    {
-        if (!Physics.SphereCast(_target.position, radius: _cameraThickness, _currentCameraOffset, out RaycastHit hitInfo,
-            _currentCameraOffset.magnitude, ~_layer, QueryTriggerInteraction.Ignore)) return;
+            _layer = 1 << LayerMask.NameToLayer("Player");
+        }
 
-        Vector3 newOffset = hitInfo.point - _target.position;
+        protected override void LateUpdate()
+        {
+            base.LateUpdate();
 
-        _currentCameraOffset = _currentCameraOffset.normalized * newOffset.magnitude;
-    }
+            HandleOffsetMagnitude();
+            HandleFollowing();
+        }
 
-    private void HandleFollowing()
-    {
-        _transform.position = _target.position + _currentCameraOffset;
+        protected override void HandleRotation()
+        {
+            base.HandleRotation();
+
+            _currentCameraOffset = _transform.rotation * _cameraOffset;
+        }
+
+        private void HandleOffsetMagnitude()
+        {
+            if (!Physics.SphereCast(_target.position, radius: _cameraThickness, _currentCameraOffset, out RaycastHit hitInfo,
+                _currentCameraOffset.magnitude, ~_layer, QueryTriggerInteraction.Ignore)) return;
+
+            Vector3 newOffset = hitInfo.point - _target.position;
+
+            _currentCameraOffset = _currentCameraOffset.normalized * newOffset.magnitude;
+        }
+
+        private void HandleFollowing()
+        {
+            _transform.position = _target.position + _currentCameraOffset;
 
 #if UNITY_EDITOR || DEBUG_BUILD
-        if (_debugging)
-        {
-            Debug.DrawLine(_target.position, _target.position + _currentCameraOffset);
-        }
+            if (_debugging)
+            {
+                Debug.DrawLine(_target.position, _target.position + _currentCameraOffset);
+            }
 #endif
+        }
     }
 }
