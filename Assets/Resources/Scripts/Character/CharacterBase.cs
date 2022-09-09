@@ -118,9 +118,10 @@ namespace GameEngine.Core
 
         protected void HandleGravity()
         {
-            if (_characterController.isGrounded)
+            if (IsGrounded())
             {
                 CurrentVerticalSpeed = 0;
+                _velocity.y = 0;
                 return;
             }
 
@@ -164,6 +165,17 @@ namespace GameEngine.Core
         {
             _velocity.x = velocity.x;
             _velocity.z = velocity.z;
+        }
+
+        protected bool IsGrounded()
+        {
+            Ray ray = new Ray
+            {
+                origin = _transform.position + (_characterController.center - Vector3.up * (_characterController.height / 2)),
+                direction = -Vector3.up
+            };
+
+            return Physics.Raycast(ray, maxDistance: 0.05f);
         }
     }
 }
