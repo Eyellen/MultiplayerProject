@@ -8,6 +8,10 @@ namespace GameEngine.Core
     {
         private Transform _cameraTransform;
 
+        [Header("Third Person Character Settings")]
+        [SerializeField]
+        private float _turnSmoothness = 15f;
+
         protected override void Start()
         {
             base.Start();
@@ -22,10 +26,12 @@ namespace GameEngine.Core
             // Rotating character
             float targetAngle = Mathf.Atan2(axis.x, axis.z) *
                 Mathf.Rad2Deg + _cameraTransform.eulerAngles.y;
-            _transform.rotation = Quaternion.Euler(0, targetAngle, 0);
+
+            _transform.rotation = Quaternion.Lerp(_transform.rotation,
+                Quaternion.Euler(0, targetAngle, 0), _turnSmoothness * Time.deltaTime);
 
             // Rotating movement direction
-            Vector3 moveDirection = _transform.rotation * Vector3.forward;
+            Vector3 moveDirection = Quaternion.Euler(0, targetAngle, 0) * Vector3.forward;
             SetHorizontalVelocity(_movementSpeed * moveDirection);
         }
     }

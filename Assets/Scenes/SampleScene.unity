@@ -738,6 +738,10 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 38642740, guid: ecbe7501fa19be047aaad54597d4ae08, type: 3}
+      propertyPath: _turnSmoothness
+      value: 15
+      objectReference: {fileID: 0}
     - target: {fileID: 8988851170231773840, guid: ecbe7501fa19be047aaad54597d4ae08, type: 3}
       propertyPath: m_Name
       value: Player
