@@ -48,11 +48,6 @@ namespace GameEngine.Core
             UpdateMovement();
         }
 
-        protected virtual void FixedUpdate()
-        {
-            HandleGravity();
-        }
-
         private void OnControllerColliderHit(ControllerColliderHit hit)
         {
             if (_currentState == CharacterState.Dash)
@@ -61,6 +56,8 @@ namespace GameEngine.Core
 
         private void UpdateMovement()
         {
+            HandleGravity();
+
             HandleStates();
 
             _characterController.Move(_velocity * Time.deltaTime);
