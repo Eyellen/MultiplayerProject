@@ -739,6 +739,14 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 38642740, guid: ecbe7501fa19be047aaad54597d4ae08, type: 3}
+      propertyPath: _dashDistance
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 38642740, guid: ecbe7501fa19be047aaad54597d4ae08, type: 3}
+      propertyPath: _dashLeadTime
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 38642740, guid: ecbe7501fa19be047aaad54597d4ae08, type: 3}
       propertyPath: _turnSmoothness
       value: 15
       objectReference: {fileID: 0}

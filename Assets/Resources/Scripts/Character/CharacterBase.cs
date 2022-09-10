@@ -28,10 +28,10 @@ namespace GameEngine.Core
 
         [Header("Dash Settings")]
         [SerializeField]
-        protected float _dashMaxSpeed = 10f;
+        protected float _dashDistance = 7f;
 
         [SerializeField]
-        protected float _dashLeadTime = 1f;
+        protected float _dashLeadTime = 0.5f;
 
         [Header("Gravity Settings")]
         private float _gravity = 9.8f;
@@ -51,6 +51,12 @@ namespace GameEngine.Core
         protected virtual void FixedUpdate()
         {
             HandleGravity();
+        }
+
+        private void OnControllerColliderHit(ControllerColliderHit hit)
+        {
+            if (_currentState == CharacterState.Dash)
+                _currentState = CharacterState.Idle;
         }
 
         private void UpdateMovement()
@@ -140,14 +146,16 @@ namespace GameEngine.Core
         {
             _currentState = CharacterState.Dash;
 
-            float dashCurrentTime = 0;
-            float dashCurrentSpeed = _dashMaxSpeed;
+            SetHorizontalVelocity(_dashDistance / _dashLeadTime * _transform.forward);
 
-            while (dashCurrentTime < _dashLeadTime)
+            for (float currentTime = 0; currentTime < _dashLeadTime; currentTime += Time.deltaTime)
             {
-                SetHorizontalVelocity(dashCurrentSpeed / _dashLeadTime * _transform.forward);
-
-                dashCurrentTime += Time.deltaTime;
+                // Reset velocity if state has been exited
+                if (_currentState != CharacterState.Dash)
+                {
+                    SetHorizontalVelocity(Vector3.zero);
+                    yield break;
+                }
 
                 yield return null;
             }
