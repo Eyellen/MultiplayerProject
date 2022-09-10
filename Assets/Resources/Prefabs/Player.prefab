@@ -219,8 +219,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _movementSpeed: 5
-  _dashMaxSpeed: 10
-  _dashLeadTime: 1
+  _dashDistance: 7
+  _dashLeadTime: 0.5
+  _turnSmoothness: 15
 --- !u!1 &8988851171612307104
 GameObject:
   m_ObjectHideFlags: 0
