@@ -132,7 +132,7 @@ namespace GameEngine.Core
             }
 
             CurrentVerticalSpeed -= _gravity * Time.deltaTime;
-            _velocity.y = CurrentVerticalSpeed;
+            _velocity.y += CurrentVerticalSpeed;
         }
 
         protected virtual void HandleHorizontalMovement(Vector3 axis)
