@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using Input = GameEngine.UserInput.Input;
+using Mirror;
 
 namespace GameEngine.Core
 {
@@ -11,7 +12,7 @@ namespace GameEngine.Core
         Dash
     }
 
-    public class CharacterBase : MonoBehaviour
+    public class CharacterBase : NetworkBehaviour
     {
         protected Transform _transform;
         protected CharacterController _characterController;
