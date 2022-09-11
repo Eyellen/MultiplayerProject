@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using Input = GameEngine.UserInput.Input;
 
@@ -30,12 +29,39 @@ namespace GameEngine.Core
         [SerializeField]
         protected float _dashDistance = 7f;
 
+        /// <summary>
+        /// Can't be less than 0.1f because in this case it will not be able to reach target position
+        /// </summary>
         [SerializeField]
-        protected float _dashLeadTime = 0.5f;
+        [Tooltip("Can't be less than 0.1.")]
+        private float _dashStartSpeed = 10f;
+
+        /// <summary>
+        /// Can't be less than 0.1f because in this case it will not be able to reach target position
+        /// </summary>
+        [SerializeField]
+        [Tooltip("Can't be less than 0.1.")]
+        private float _dashEndSpeed = 0.5f;
+
+        [SerializeField]
+        [Tooltip("Can't be less than 0 and more than \"Dash Distance\".")]
+        private float _dampAfterDistance = 5f;
 
         [Header("Gravity Settings")]
         private float _gravity = 9.8f;
         protected float CurrentVerticalSpeed { get; private set; }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            //  Clamping values to avoid errors
+            _dashStartSpeed = _dashStartSpeed < 0.1f ? 0.1f : _dashStartSpeed;
+            _dashEndSpeed = _dashEndSpeed < 0.1f ? 0.1f : _dashEndSpeed;
+
+            _dampAfterDistance = _dampAfterDistance > _dashDistance ? _dashDistance : _dampAfterDistance;
+            _dampAfterDistance = _dampAfterDistance < 0 ? 0 : _dampAfterDistance;
+        }
+#endif
 
         protected virtual void Start()
         {
@@ -143,19 +169,37 @@ namespace GameEngine.Core
         {
             _currentState = CharacterState.Dash;
 
-            SetHorizontalVelocity(_dashDistance / _dashLeadTime * _transform.forward);
+            Vector3 targetPosition = _transform.position + _transform.forward * _dashDistance;
 
-            for (float currentTime = 0; currentTime < _dashLeadTime; currentTime += Time.deltaTime)
+            float traveledDistance;
+            float currentSpeed = _dashStartSpeed;
+
+            for (traveledDistance = 0; traveledDistance < _dashDistance; traveledDistance += currentSpeed * Time.deltaTime)
             {
-                // Reset velocity if state has been exited
+                //  Reset velocity if dash state has been exited
                 if (_currentState != CharacterState.Dash)
                 {
                     SetHorizontalVelocity(Vector3.zero);
                     yield break;
                 }
 
+                if (traveledDistance > _dampAfterDistance)
+                {
+                    float dampingRatio = (traveledDistance - _dampAfterDistance) / (_dashDistance - _dampAfterDistance);
+
+                    currentSpeed = Mathf.Lerp(_dashStartSpeed, _dashEndSpeed, dampingRatio);
+                }
+
+                SetHorizontalVelocity(currentSpeed * _transform.forward);
+
                 yield return null;
             }
+
+            //  Manually setting position.
+            //      Because Time.deltaTime is not accurate.
+            //      Also we skip 1 frame before we check if we traveled enough
+            //          Therefore it travels for 1 extra frame.
+            _transform.position = targetPosition;
 
             SetHorizontalVelocity(Vector3.zero);
             _currentState = CharacterState.Idle;
