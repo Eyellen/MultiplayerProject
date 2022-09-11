@@ -240,7 +240,9 @@ MonoBehaviour:
   syncInterval: 0.1
   _movementSpeed: 5
   _dashDistance: 7
-  _dashLeadTime: 0.5
+  _dashStartSpeed: 10
+  _dashEndSpeed: 0.5
+  _dampAfterDistance: 5
   _turnSmoothness: 15
 --- !u!1 &8988851171612307104
 GameObject:
