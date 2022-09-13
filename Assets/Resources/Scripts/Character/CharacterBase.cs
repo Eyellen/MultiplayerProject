@@ -127,6 +127,10 @@ namespace GameEngine.Core
 
         protected virtual void Update()
         {
+            if (isLocalPlayer)
+                HandleStates();
+
+            #region ServerTick
             _timer += Time.deltaTime;
 
             while (_timer > _minTimeBetweenTicks)
@@ -135,6 +139,7 @@ namespace GameEngine.Core
                 ServerTick();
                 _currentTick++;
             }
+            #endregion
         }
 
         /// <summary>
@@ -180,7 +185,8 @@ namespace GameEngine.Core
 
         private void OnControllerColliderHit(ControllerColliderHit hit)
         {
-            if (_currentState == CharacterState.Dash)
+            if (_currentState == CharacterState.Dash &&
+                (_characterController.collisionFlags & CollisionFlags.Sides) != 0)
                 _currentState = CharacterState.Idle;
         }
 
@@ -231,7 +237,7 @@ namespace GameEngine.Core
 
             HandleGravity();
 
-            HandleStates();
+            //HandleStates();
         }
 
         [Client]
@@ -304,11 +310,11 @@ namespace GameEngine.Core
             _velocity.y += CurrentVerticalSpeed;
         }
 
-        protected virtual void HandleHorizontalMovement(Vector3 axis)
+        protected virtual void HandleHorizontalMovement(Vector3 inputVector)
         {
-            if (axis.magnitude < 0.1) return;
+            if (inputVector.magnitude < 0.1) return;
 
-            SetHorizontalVelocity(_movementSpeed * (_transform.rotation * axis));
+            SetHorizontalVelocity(_movementSpeed * (_transform.rotation * inputVector));
         }
 
         private IEnumerator HandleDashCoroutine()
@@ -345,7 +351,7 @@ namespace GameEngine.Core
             //      Because Time.deltaTime is not accurate.
             //      Also we skip 1 frame before we check if we traveled enough
             //          Therefore it travels for 1 extra frame.
-            _transform.position = targetPosition;
+            //_transform.position = targetPosition;
 
             SetHorizontalVelocity(Vector3.zero);
             _currentState = CharacterState.Idle;
