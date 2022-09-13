@@ -25,6 +25,16 @@ namespace GameEngine.Core
             _layer = 1 << LayerMask.NameToLayer("Player");
         }
 
+        protected virtual void Start()
+        {
+            // Disabling camera if it's not local player's camera
+            if (!_target.GetComponent<CharacterBase>().isLocalPlayer)
+            {
+                gameObject.tag = "Untagged";
+                gameObject.SetActive(false);
+            }
+        }
+
         protected override void LateUpdate()
         {
             base.LateUpdate();
