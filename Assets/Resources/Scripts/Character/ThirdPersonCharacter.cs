@@ -6,17 +6,16 @@ namespace GameEngine.Core
 {
     public class ThirdPersonCharacter : CharacterBase
     {
+        [Header("Third Person Character Settings")]
+        [SerializeField]
         private Transform _cameraTransform;
 
-        [Header("Third Person Character Settings")]
         [SerializeField]
         private float _turnSmoothness = 15f;
 
         protected override void Start()
         {
             base.Start();
-
-            _cameraTransform = Camera.main.transform;
         }
 
         protected override void HandleHorizontalMovement(Vector3 axis)
