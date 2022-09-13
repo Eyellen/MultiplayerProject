@@ -243,6 +243,7 @@ MonoBehaviour:
   _dashStartSpeed: 10
   _dashEndSpeed: 0.5
   _dampAfterDistance: 5
+  _cameraTransform: {fileID: 8988851169881252823}
   _turnSmoothness: 15
 --- !u!1 &8988851171612307104
 GameObject:
