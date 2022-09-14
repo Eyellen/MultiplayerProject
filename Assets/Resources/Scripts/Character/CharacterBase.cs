@@ -31,7 +31,8 @@ namespace GameEngine.Core
         protected Transform _transform;
         private CharacterController _characterController;
 
-        private CharacterState _currentState = CharacterState.Idle;
+        [field: SyncVar]
+        public CharacterState CurrentState { get; private set; } = CharacterState.Idle;
 
         protected Vector3 _velocity;
         public Vector3 Velocity { get => _velocity; }
@@ -151,6 +152,11 @@ namespace GameEngine.Core
         {
             if (isLocalPlayer)
             {
+                CmdSetCurrentStateOnServer(CurrentState);
+            }
+
+            if (isLocalPlayer)
+            {
                 if (!_latestServerState.Equals(default(StateMsg)) &&
                     (_lastProcessedState.Equals(default(StateMsg)) ||
                     !_latestServerState.Equals(_lastProcessedState)))
@@ -191,7 +197,7 @@ namespace GameEngine.Core
                 }
             }
 
-            if(isServer)
+            if (isServer)
             {
                 RpcSendPositionToAllClients(_transform.position);
                 RpcSendVerticalRotationToAllClients(_transform.eulerAngles.y);
@@ -200,9 +206,9 @@ namespace GameEngine.Core
 
         private void OnControllerColliderHit(ControllerColliderHit hit)
         {
-            if (_currentState == CharacterState.Dash &&
+            if (CurrentState == CharacterState.Dash &&
                 (_characterController.collisionFlags & CollisionFlags.Sides) != 0)
-                _currentState = CharacterState.Idle;
+                CurrentState = CharacterState.Idle;
         }
 
         private StateMsg ProcessMovement(InputMsg inputMsg)
@@ -264,19 +270,19 @@ namespace GameEngine.Core
         private void HandleStates()
         {
             // Simple implementation of StateMachine
-            switch (_currentState)
+            switch (CurrentState)
             {
                 case CharacterState.Idle:
                     {
                         if (Mathf.Abs(Input.MovementVector.magnitude) >= 0.1)
                         {
-                            _currentState = CharacterState.Walk;
+                            CurrentState = CharacterState.Walk;
                             break;
                         }
 
                         if (Input.IsDashPressed)
                         {
-                            _currentState = CharacterState.Dash;
+                            CurrentState = CharacterState.Dash;
                             StartCoroutine(HandleDashCoroutine());
                             break;
                         }
@@ -288,14 +294,14 @@ namespace GameEngine.Core
                     {
                         if (Mathf.Abs(Input.MovementVector.magnitude) < 0.1)
                         {
-                            _currentState = CharacterState.Idle;
+                            CurrentState = CharacterState.Idle;
                             SetHorizontalVelocity(Vector3.zero);
                             break;
                         }
 
                         if (Input.IsDashPressed)
                         {
-                            _currentState = CharacterState.Dash;
+                            CurrentState = CharacterState.Dash;
                             StartCoroutine(HandleDashCoroutine());
                             break;
                         }
@@ -339,7 +345,7 @@ namespace GameEngine.Core
 
         private IEnumerator HandleDashCoroutine()
         {
-            _currentState = CharacterState.Dash;
+            CurrentState = CharacterState.Dash;
 
             Vector3 targetPosition = _transform.position + _transform.forward * _dashDistance;
 
@@ -349,7 +355,7 @@ namespace GameEngine.Core
             for (traveledDistance = 0; traveledDistance < _dashDistance; traveledDistance += currentSpeed * Time.deltaTime)
             {
                 //  Reset velocity if dash state has been exited
-                if (_currentState != CharacterState.Dash)
+                if (CurrentState != CharacterState.Dash)
                 {
                     SetHorizontalVelocity(Vector3.zero);
                     yield break;
@@ -374,7 +380,7 @@ namespace GameEngine.Core
             //_transform.position = targetPosition;
 
             SetHorizontalVelocity(Vector3.zero);
-            _currentState = CharacterState.Idle;
+            CurrentState = CharacterState.Idle;
         }
 
         /// <summary>
@@ -452,6 +458,12 @@ namespace GameEngine.Core
             if (isLocalPlayer) return;
 
             _transform.rotation = Quaternion.Euler(0, yRotation, 0);
+        }
+
+        [Command(requiresAuthority = false)]
+        private void CmdSetCurrentStateOnServer(CharacterState state)
+        {
+            CurrentState = state;
         }
     }
 }
