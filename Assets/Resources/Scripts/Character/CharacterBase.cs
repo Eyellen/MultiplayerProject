@@ -86,8 +86,8 @@ namespace GameEngine.Core
         #region Client Side
         private InputMsg[] _inputBuffer;
         private StateMsg[] _stateBuffer;
-        //private StateMsg _latestServerState;
-        //private StateMsg _lastProcessedState;
+        private StateMsg _latestServerState;
+        private StateMsg _lastProcessedState;
         #endregion
 
 #if UNITY_EDITOR
@@ -149,6 +149,13 @@ namespace GameEngine.Core
         {
             if (isLocalPlayer)
             {
+                if (!_latestServerState.Equals(default(StateMsg)) &&
+                    (_lastProcessedState.Equals(default(StateMsg)) ||
+                    !_latestServerState.Equals(_lastProcessedState)))
+                {
+                    HandleServerReconciliation();
+                }
+
                 UpdateVelocity();
 
                 uint bufferIndex = _currentTick % BUFFER_SIZE;
@@ -197,7 +204,7 @@ namespace GameEngine.Core
 
             return new StateMsg
             {
-                tick = _currentTick,
+                tick = inputMsg.tick,
                 position = _transform.position,
             };
         }
@@ -226,7 +233,7 @@ namespace GameEngine.Core
         [Client]
         private void OnServerMovementState(StateMsg serverState)
         {
-            //_latestServerState = serverState;
+            _latestServerState = serverState;
         }
         #endregion
 
@@ -377,6 +384,40 @@ namespace GameEngine.Core
             };
 
             return Physics.Raycast(ray, maxDistance: 0.05f);
+        }
+
+        private void HandleServerReconciliation()
+        {
+            _lastProcessedState = _latestServerState;
+
+            uint serverStateBufferIndex = _latestServerState.tick % BUFFER_SIZE;
+            float positionError = Vector3.Distance(_latestServerState.position, _stateBuffer[serverStateBufferIndex].position);
+
+            if (positionError < 0.001f) return;
+
+#if UNITY_EDITOR
+            Debug.Log("Reconsiling!");
+#endif
+
+            // Here instead of assigning _transform.position we should use _characterController.Move
+            // Because _characterController overrides transform values
+            //_transform.position = _latestServerState.position;
+            _characterController.Move(_latestServerState.position - _transform.position);
+
+            _stateBuffer[serverStateBufferIndex] = _latestServerState;
+
+            uint tickToProcess = _latestServerState.tick + 1;
+
+            while (tickToProcess < _currentTick)
+            {
+                uint bufferIndex = tickToProcess % BUFFER_SIZE;
+
+                StateMsg stateMsg = ProcessMovement(_inputBuffer[bufferIndex]);
+
+                _stateBuffer[bufferIndex] = stateMsg;
+
+                tickToProcess++;
+            }
         }
     }
 }
