@@ -10,6 +10,7 @@ namespace GameEngine.Core
     {
         public uint tick;
         public Vector3 movementVector;
+        public float verticalRotation;
     }
 
     public struct StateMsg
@@ -127,7 +128,9 @@ namespace GameEngine.Core
         protected virtual void Update()
         {
             if (isLocalPlayer)
+            {
                 HandleStates();
+            }
 
             #region ServerTick
             _timer += Time.deltaTime;
@@ -162,6 +165,7 @@ namespace GameEngine.Core
                 InputMsg inputMsg = new InputMsg();
                 inputMsg.tick = _currentTick;
                 inputMsg.movementVector = _velocity;
+                inputMsg.verticalRotation = _transform.eulerAngles.y;
                 _inputBuffer[bufferIndex] = inputMsg;
 
                 _stateBuffer[bufferIndex] = ProcessMovement(inputMsg);
@@ -186,6 +190,12 @@ namespace GameEngine.Core
                     TargetSendStateMsg(connectionToClient, _stateBuffer[bufferIndex.Value]);
                 }
             }
+
+            if(isServer)
+            {
+                RpcSendPositionToAllClients(_transform.position);
+                RpcSendVerticalRotationToAllClients(_transform.eulerAngles.y);
+            }
         }
 
         private void OnControllerColliderHit(ControllerColliderHit hit)
@@ -201,6 +211,9 @@ namespace GameEngine.Core
             //      Because we pass _velocity as global space movement vector
             //_characterController.Move(Quaternion.Euler(0, inputMsg.movementAngle, 0) * inputMsg.movementVector * _minTimeBetweenTicks);
             _characterController.Move(inputMsg.movementVector * _minTimeBetweenTicks);
+
+            if (isServer)
+                _transform.rotation = Quaternion.Euler(0, inputMsg.verticalRotation, 0);
 
             return new StateMsg
             {
@@ -386,6 +399,7 @@ namespace GameEngine.Core
             return Physics.Raycast(ray, maxDistance: 0.05f);
         }
 
+        [Client]
         private void HandleServerReconciliation()
         {
             _lastProcessedState = _latestServerState;
@@ -418,6 +432,26 @@ namespace GameEngine.Core
 
                 tickToProcess++;
             }
+        }
+
+        [ClientRpc]
+        private void RpcSendPositionToAllClients(Vector3 position)
+        {
+            // Ignore this if we are local player
+            //      Because it will interfere with the Client Prediction
+            if (isLocalPlayer) return;
+
+            _transform.position = position;
+        }
+
+        [ClientRpc]
+        private void RpcSendVerticalRotationToAllClients(float yRotation)
+        {
+            // Ignore this if we are local player
+            //      Because it will interfere with the Client Prediction
+            if (isLocalPlayer) return;
+
+            _transform.rotation = Quaternion.Euler(0, yRotation, 0);
         }
     }
 }
