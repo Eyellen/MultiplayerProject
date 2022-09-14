@@ -1,10 +1,24 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using Input = GameEngine.UserInput.Input;
 using Mirror;
 
 namespace GameEngine.Core
 {
+    public struct InputMsg
+    {
+        public uint tick;
+        public Vector3 movementVector;
+        public float movementAngle;
+    }
+
+    public struct StateMsg
+    {
+        public uint tick;
+        public Vector3 position;
+    }
+
     public enum CharacterState
     {
         Idle,
@@ -15,7 +29,7 @@ namespace GameEngine.Core
     public class CharacterBase : NetworkBehaviour
     {
         protected Transform _transform;
-        protected CharacterController _characterController;
+        private CharacterController _characterController;
 
         private CharacterState _currentState = CharacterState.Idle;
 
@@ -28,7 +42,7 @@ namespace GameEngine.Core
 
         [Header("Dash Settings")]
         [SerializeField]
-        protected float _dashDistance = 7f;
+        private float _dashDistance = 7f;
 
         /// <summary>
         /// Can't be less than 0.1f because in this case it will not be able to reach target position
@@ -52,6 +66,30 @@ namespace GameEngine.Core
         private float _gravity = 9.8f;
         protected float CurrentVerticalSpeed { get; private set; }
 
+        #region Server and Client
+        private float _timer;
+        private uint _currentTick { get; set; }
+
+        /// <summary>
+        /// Min time between server ticks.
+        /// The value is 1.0f / NetworkManager.singleton.serverTickRate
+        /// </summary>
+        protected float _minTimeBetweenTicks { get; private set; }
+
+        private const uint BUFFER_SIZE = 1024;
+        #endregion
+
+        #region Server Side
+        private Queue<InputMsg> _inputQueue;
+        #endregion
+
+        #region Client Side
+        private InputMsg[] _inputBuffer;
+        private StateMsg[] _stateBuffer;
+        private StateMsg _latestServerState;
+        private StateMsg _lastProcessedState;
+        #endregion
+
 #if UNITY_EDITOR
         private void OnValidate()
         {
@@ -64,32 +102,152 @@ namespace GameEngine.Core
         }
 #endif
 
+        public override void OnStartClient()
+        {
+            // Assigning timer to be in sync with server
+            _timer = (float)NetworkTime.time;
+        }
+
         protected virtual void Start()
         {
             _transform = GetComponent<Transform>();
             _characterController = GetComponent<CharacterController>();
+
+            _minTimeBetweenTicks = 1f / NetworkManager.singleton.serverTickRate;
+
+            // No need to allocate memory for buffers if this is not local player or server
+            if (!isLocalPlayer && !isServer) return;
+
+            if (isLocalPlayer)
+                _inputBuffer = new InputMsg[BUFFER_SIZE];
+            else if (isServer)
+                _inputQueue = new Queue<InputMsg>();
+            _stateBuffer = new StateMsg[BUFFER_SIZE];
         }
 
         protected virtual void Update()
         {
-            UpdateMovement();
+            if (isLocalPlayer)
+                HandleStates();
+
+            #region ServerTick
+            _timer += Time.deltaTime;
+
+            while (_timer > _minTimeBetweenTicks)
+            {
+                _timer -= _minTimeBetweenTicks;
+                ServerTick();
+                _currentTick++;
+            }
+            #endregion
+        }
+
+        /// <summary>
+        /// This method executes once every _minTimeBetweenTicks
+        /// </summary>
+        protected virtual void ServerTick()
+        {
+            if (isLocalPlayer)
+            {
+                if (!_latestServerState.Equals(default(StateMsg)) &&
+                    (_lastProcessedState.Equals(default(StateMsg)) ||
+                    !_latestServerState.Equals(_lastProcessedState)))
+                {
+                    HandleServerReconciliation();
+                }
+
+                UpdateVelocity();
+
+                uint bufferIndex = _currentTick % BUFFER_SIZE;
+
+                InputMsg inputMsg = new InputMsg();
+                inputMsg.tick = _currentTick;
+                inputMsg.movementVector = _velocity;
+                inputMsg.movementAngle = _transform.rotation.y;
+                _inputBuffer[bufferIndex] = inputMsg;
+
+                _stateBuffer[bufferIndex] = ProcessMovement(inputMsg);
+
+                CmdSendInputMsg(inputMsg);
+            }
+            else if (isServer)
+            {
+                uint? bufferIndex = null;
+                while (_inputQueue.Count > 1)
+                {
+                    InputMsg inputMsg = _inputQueue.Dequeue();
+
+                    bufferIndex = inputMsg.tick % BUFFER_SIZE;
+
+                    StateMsg stateMsg = ProcessMovement(inputMsg);
+                    _stateBuffer[bufferIndex.Value] = stateMsg;
+                }
+
+                if (bufferIndex != null)
+                {
+                    TargetSendStateMsg(connectionToClient, _stateBuffer[bufferIndex.Value]);
+                }
+            }
         }
 
         private void OnControllerColliderHit(ControllerColliderHit hit)
         {
-            if (_currentState == CharacterState.Dash)
+            if (_currentState == CharacterState.Dash &&
+                (_characterController.collisionFlags & CollisionFlags.Sides) != 0)
                 _currentState = CharacterState.Idle;
         }
 
-        private void UpdateMovement()
+        private StateMsg ProcessMovement(InputMsg inputMsg)
         {
-            HandleGravity();
+            //_characterController.Move(Quaternion.Euler(0, inputMsg.movementAngle, 0) * inputMsg.movementVector * _minTimeBetweenTicks);
+            _characterController.Move(inputMsg.movementVector * _minTimeBetweenTicks);
 
-            HandleStates();
-
-            _characterController.Move(_velocity * Time.deltaTime);
+            return new StateMsg
+            {
+                tick = inputMsg.tick,
+                position = _transform.position,
+            };
         }
 
+        #region Network Messages and CallBacks
+        [Command(requiresAuthority = false)]
+        private void CmdSendInputMsg(InputMsg inputMsg)
+        {
+            OnClientInput(inputMsg);
+        }
+
+        [Server]
+        private void OnClientInput(InputMsg inputMsg)
+        {
+            if (isLocalPlayer) return;
+
+            _inputQueue.Enqueue(inputMsg);
+        }
+
+        [TargetRpc]
+        private void TargetSendStateMsg(NetworkConnection connectionToClient, StateMsg stateMsg)
+        {
+            OnServerMovementState(stateMsg);
+        }
+
+        [Client]
+        private void OnServerMovementState(StateMsg serverState)
+        {
+            _latestServerState = serverState;
+        }
+        #endregion
+
+        [Client]
+        private void UpdateVelocity()
+        {
+            if (!isLocalPlayer) return;
+
+            HandleGravity();
+
+            //HandleStates();
+        }
+
+        [Client]
         private void HandleStates()
         {
             // Simple implementation of StateMachine
@@ -155,15 +313,15 @@ namespace GameEngine.Core
                 return;
             }
 
-            CurrentVerticalSpeed -= _gravity * Time.deltaTime;
+            CurrentVerticalSpeed -= _gravity * _minTimeBetweenTicks;
             _velocity.y += CurrentVerticalSpeed;
         }
 
-        protected virtual void HandleHorizontalMovement(Vector3 axis)
+        protected virtual void HandleHorizontalMovement(Vector3 inputVector)
         {
-            if (axis.magnitude < 0.1) return;
+            if (inputVector.magnitude < 0.1) return;
 
-            SetHorizontalVelocity(_movementSpeed * (_transform.rotation * axis));
+            SetHorizontalVelocity(_movementSpeed * (_transform.rotation * inputVector));
         }
 
         private IEnumerator HandleDashCoroutine()
@@ -200,7 +358,7 @@ namespace GameEngine.Core
             //      Because Time.deltaTime is not accurate.
             //      Also we skip 1 frame before we check if we traveled enough
             //          Therefore it travels for 1 extra frame.
-            _transform.position = targetPosition;
+            //_transform.position = targetPosition;
 
             SetHorizontalVelocity(Vector3.zero);
             _currentState = CharacterState.Idle;
@@ -226,6 +384,40 @@ namespace GameEngine.Core
             };
 
             return Physics.Raycast(ray, maxDistance: 0.05f);
+        }
+
+        private void HandleServerReconciliation()
+        {
+            _lastProcessedState = _latestServerState;
+
+            uint serverStateBufferIndex = _latestServerState.tick % BUFFER_SIZE;
+            float positionError = Vector3.Distance(_latestServerState.position, _stateBuffer[serverStateBufferIndex].position);
+
+            if (positionError < 0.001f) return;
+
+#if UNITY_EDITOR
+            Debug.Log("Reconsiling!");
+#endif
+
+            // Here instead of assigning _transform.position we should use _characterController.Move
+            // Because _characterController overrides transform values
+            //_transform.position = _latestServerState.position;
+            _characterController.Move(_latestServerState.position - _transform.position);
+
+            _stateBuffer[serverStateBufferIndex] = _latestServerState;
+
+            uint tickToProcess = _latestServerState.tick + 1;
+
+            while (tickToProcess < _currentTick)
+            {
+                uint bufferIndex = tickToProcess % BUFFER_SIZE;
+
+                StateMsg stateMsg = ProcessMovement(_inputBuffer[bufferIndex]);
+
+                _stateBuffer[bufferIndex] = stateMsg;
+
+                tickToProcess++;
+            }
         }
     }
 }
