@@ -10,7 +10,6 @@ namespace GameEngine.Core
     {
         public uint tick;
         public Vector3 movementVector;
-        public float movementAngle;
     }
 
     public struct StateMsg
@@ -163,7 +162,6 @@ namespace GameEngine.Core
                 InputMsg inputMsg = new InputMsg();
                 inputMsg.tick = _currentTick;
                 inputMsg.movementVector = _velocity;
-                inputMsg.movementAngle = _transform.rotation.y;
                 _inputBuffer[bufferIndex] = inputMsg;
 
                 _stateBuffer[bufferIndex] = ProcessMovement(inputMsg);
@@ -199,6 +197,8 @@ namespace GameEngine.Core
 
         private StateMsg ProcessMovement(InputMsg inputMsg)
         {
+            // No need to apply vertical rotation of character to _velocity here
+            //      Because we pass _velocity as global space movement vector
             //_characterController.Move(Quaternion.Euler(0, inputMsg.movementAngle, 0) * inputMsg.movementVector * _minTimeBetweenTicks);
             _characterController.Move(inputMsg.movementVector * _minTimeBetweenTicks);
 
@@ -399,8 +399,8 @@ namespace GameEngine.Core
             Debug.Log("Reconsiling!");
 #endif
 
-            // Here instead of assigning _transform.position we should use _characterController.Move
-            // Because _characterController overrides transform values
+            // Here instead of assigning _transform.position we should use _characterController.Move()
+            //      Because _characterController overrides transform values
             //_transform.position = _latestServerState.position;
             _characterController.Move(_latestServerState.position - _transform.position);
 
