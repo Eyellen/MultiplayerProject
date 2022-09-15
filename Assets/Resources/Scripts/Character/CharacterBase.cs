@@ -9,8 +9,8 @@ namespace GameEngine.Core
     public struct InputMsg
     {
         public uint tick;
-        public Vector3 movementVector;
-        public float verticalRotation;
+        public Vector3 movementInput;
+        public bool isDashPressed;
     }
 
     public struct StateMsg
@@ -33,9 +33,6 @@ namespace GameEngine.Core
 
         [field: SyncVar]
         public CharacterState CurrentState { get; private set; } = CharacterState.Idle;
-
-        protected Vector3 _velocity;
-        public Vector3 Velocity { get => _velocity; }
 
         [Header("Movement Settings")]
         [SerializeField]
@@ -91,6 +88,11 @@ namespace GameEngine.Core
         private StateMsg _lastProcessedState;
         #endregion
 
+        #region Inputs
+        private Vector3 _movementInput;
+        private bool _isDashPressed;
+        #endregion
+
 #if UNITY_EDITOR
         private void OnValidate()
         {
@@ -130,7 +132,7 @@ namespace GameEngine.Core
         {
             if (isLocalPlayer)
             {
-                HandleStates();
+                HandleInputs();
             }
 
             #region ServerTick
@@ -150,10 +152,7 @@ namespace GameEngine.Core
         /// </summary>
         protected virtual void ServerTick()
         {
-            if (isLocalPlayer)
-            {
-                CmdSetCurrentStateOnServer(CurrentState);
-            }
+            HandleGravity();
 
             if (isLocalPlayer)
             {
@@ -164,14 +163,14 @@ namespace GameEngine.Core
                     HandleServerReconciliation();
                 }
 
-                UpdateVelocity();
-
                 uint bufferIndex = _currentTick % BUFFER_SIZE;
 
                 InputMsg inputMsg = new InputMsg();
-                inputMsg.tick = _currentTick;
-                inputMsg.movementVector = _velocity;
-                inputMsg.verticalRotation = _transform.eulerAngles.y;
+                {
+                    inputMsg.tick = _currentTick;
+                    inputMsg.movementInput = _movementInput;
+                    inputMsg.isDashPressed = _isDashPressed;
+                }
                 _inputBuffer[bufferIndex] = inputMsg;
 
                 _stateBuffer[bufferIndex] = ProcessMovement(inputMsg);
@@ -197,6 +196,11 @@ namespace GameEngine.Core
                 }
             }
 
+            if (isLocalPlayer)
+            {
+                ResetInputs();
+            }
+
             if (isServer)
             {
                 RpcSendPositionToAllClients(_transform.position);
@@ -206,20 +210,34 @@ namespace GameEngine.Core
 
         private void OnControllerColliderHit(ControllerColliderHit hit)
         {
+            // Exit dash state if we hit some vertical obstacle
             if (CurrentState == CharacterState.Dash &&
                 (_characterController.collisionFlags & CollisionFlags.Sides) != 0)
-                CurrentState = CharacterState.Idle;
+            {
+                ExitDashState();
+            }
+        }
+
+        [Client]
+        private void HandleInputs()
+        {
+            if (Mathf.Abs(Input.MovementVector.magnitude) >= 0.1)
+                _movementInput = Input.MovementVector;
+
+            if (Input.IsDashPressed)
+                _isDashPressed = true;
+        }
+
+        [Client]
+        private void ResetInputs()
+        {
+            _movementInput = default(Vector3);
+            _isDashPressed = default(bool);
         }
 
         private StateMsg ProcessMovement(InputMsg inputMsg)
         {
-            // No need to apply vertical rotation of character to _velocity here
-            //      Because we pass _velocity as global space movement vector
-            //_characterController.Move(Quaternion.Euler(0, inputMsg.movementAngle, 0) * inputMsg.movementVector * _minTimeBetweenTicks);
-            _characterController.Move(inputMsg.movementVector * _minTimeBetweenTicks);
-
-            if (isServer)
-                _transform.rotation = Quaternion.Euler(0, inputMsg.verticalRotation, 0);
+            HandleStates(inputMsg);
 
             return new StateMsg
             {
@@ -228,7 +246,7 @@ namespace GameEngine.Core
             };
         }
 
-        #region Network Messages and CallBacks
+        #region Network Messages and Callbacks
         [Command(requiresAuthority = false)]
         private void CmdSendInputMsg(InputMsg inputMsg)
         {
@@ -256,34 +274,22 @@ namespace GameEngine.Core
         }
         #endregion
 
-        [Client]
-        private void UpdateVelocity()
-        {
-            if (!isLocalPlayer) return;
-
-            HandleGravity();
-
-            //HandleStates();
-        }
-
-        [Client]
-        private void HandleStates()
+        private void HandleStates(InputMsg inputMsg)
         {
             // Simple implementation of StateMachine
             switch (CurrentState)
             {
                 case CharacterState.Idle:
                     {
-                        if (Mathf.Abs(Input.MovementVector.magnitude) >= 0.1)
+                        if (Mathf.Abs(inputMsg.movementInput.magnitude) >= 0.1)
                         {
                             CurrentState = CharacterState.Walk;
                             break;
                         }
 
-                        if (Input.IsDashPressed)
+                        if (inputMsg.isDashPressed)
                         {
                             CurrentState = CharacterState.Dash;
-                            StartCoroutine(HandleDashCoroutine());
                             break;
                         }
 
@@ -292,27 +298,26 @@ namespace GameEngine.Core
 
                 case CharacterState.Walk:
                     {
-                        if (Mathf.Abs(Input.MovementVector.magnitude) < 0.1)
+                        if (Mathf.Abs(inputMsg.movementInput.magnitude) < 0.1)
                         {
                             CurrentState = CharacterState.Idle;
-                            SetHorizontalVelocity(Vector3.zero);
                             break;
                         }
 
-                        if (Input.IsDashPressed)
+                        if (inputMsg.isDashPressed)
                         {
                             CurrentState = CharacterState.Dash;
-                            StartCoroutine(HandleDashCoroutine());
                             break;
                         }
 
-                        HandleHorizontalMovement(Input.MovementVector);
+                        Move(_movementSpeed * _minTimeBetweenTicks * (_transform.rotation * inputMsg.movementInput));
 
                         break;
                     }
 
                 case CharacterState.Dash:
                     {
+                        HandleDashState();
                         break;
                     }
 
@@ -328,70 +333,121 @@ namespace GameEngine.Core
             if (IsGrounded())
             {
                 CurrentVerticalSpeed = 0;
-                _velocity.y = 0;
                 return;
             }
 
-            CurrentVerticalSpeed -= _gravity * _minTimeBetweenTicks;
-            _velocity.y += CurrentVerticalSpeed;
+            CurrentVerticalSpeed -= _gravity * (_minTimeBetweenTicks * _minTimeBetweenTicks);
+            Move(new Vector3(0, CurrentVerticalSpeed, 0));
         }
 
-        protected virtual void HandleHorizontalMovement(Vector3 inputVector)
+        // Not suitable because can't sync Coroutines with ServerTick()
+        //private IEnumerator HandleDashCoroutine()
+        //{
+        //    CurrentState = CharacterState.Dash;
+        //    uint tick = 0;
+
+        //    Vector3 targetPosition = _transform.position + _transform.forward * _dashDistance;
+
+        //    float traveledDistance;
+        //    float currentSpeed = _dashStartSpeed;
+
+        //    for (traveledDistance = 0; traveledDistance < _dashDistance; /*traveledDistance += currentSpeed * _minTimeBetweenTicks*/)
+        //    {
+        //        // Here we wait for next server tick
+        //        while (tick == _currentTick)
+        //        {
+        //            yield return null;
+        //        }
+
+        //        tick = _currentTick;
+
+        //        // Exit the coroutine if character is no longer in Dash state
+        //        if (CurrentState != CharacterState.Dash)
+        //        {
+        //            Debug.Log("Exit Dash state");
+        //            yield break;
+        //        }
+                    
+
+        //        // Damping the speed after _dampAfterDistance
+        //        if (traveledDistance > _dampAfterDistance)
+        //        {
+        //            float dampingRatio = (traveledDistance - _dampAfterDistance) / (_dashDistance - _dampAfterDistance);
+
+        //            currentSpeed = Mathf.Lerp(_dashStartSpeed, _dashEndSpeed, dampingRatio);
+        //        }
+
+        //        // Moving the character by currentSpeed in local forward direction
+        //        Move(currentSpeed * _minTimeBetweenTicks * _transform.forward);
+        //        traveledDistance += currentSpeed * _minTimeBetweenTicks;
+        //        Debug.Log($"Traveled in this server tick: {traveledDistance - currentSpeed * _minTimeBetweenTicks}");
+
+        //        //// Waiting for _minTimeBetweenTicks because our movement should execute in sync with ServerTick()
+        //        //yield return new WaitForSeconds(_minTimeBetweenTicks);
+
+        //        // Here we check if character will be further than it should be in the next ServerTick()
+        //        // And if he will be then we move him to targetPosition and exit the loop
+        //        if (traveledDistance + (currentSpeed * _minTimeBetweenTicks) > _dashDistance)
+        //        {
+        //            Move(targetPosition - _transform.position);
+        //            traveledDistance = _dashDistance;
+        //        }
+
+        //        //yield return null;
+        //    }
+
+        //    CurrentState = CharacterState.Idle;
+        //}
+
+        private bool _isDashing;
+        private Vector3 _targetPosition;
+        private float _traveledDistance;
+        private float _currentDashSpeed;
+        private void HandleDashState()
         {
-            if (inputVector.magnitude < 0.1) return;
-
-            SetHorizontalVelocity(_movementSpeed * (_transform.rotation * inputVector));
-        }
-
-        private IEnumerator HandleDashCoroutine()
-        {
-            CurrentState = CharacterState.Dash;
-
-            Vector3 targetPosition = _transform.position + _transform.forward * _dashDistance;
-
-            float traveledDistance;
-            float currentSpeed = _dashStartSpeed;
-
-            for (traveledDistance = 0; traveledDistance < _dashDistance; traveledDistance += currentSpeed * Time.deltaTime)
+            if (!_isDashing)
             {
-                //  Reset velocity if dash state has been exited
-                if (CurrentState != CharacterState.Dash)
-                {
-                    SetHorizontalVelocity(Vector3.zero);
-                    yield break;
-                }
+                _isDashing = true;
 
-                if (traveledDistance > _dampAfterDistance)
-                {
-                    float dampingRatio = (traveledDistance - _dampAfterDistance) / (_dashDistance - _dampAfterDistance);
-
-                    currentSpeed = Mathf.Lerp(_dashStartSpeed, _dashEndSpeed, dampingRatio);
-                }
-
-                SetHorizontalVelocity(currentSpeed * _transform.forward);
-
-                yield return null;
+                _targetPosition = _transform.position + _transform.forward * _dashDistance;
+                _traveledDistance = 0;
+                _currentDashSpeed = _dashStartSpeed;
             }
 
-            //  Manually setting position.
-            //      Because Time.deltaTime is not accurate.
-            //      Also we skip 1 frame before we check if we traveled enough
-            //          Therefore it travels for 1 extra frame.
-            //_transform.position = targetPosition;
+            if (_traveledDistance < _dashDistance)
+            {
+                // Damping the speed after _dampAfterDistance
+                if (_traveledDistance > _dampAfterDistance)
+                {
+                    float dampingRatio = (_traveledDistance - _dampAfterDistance) / (_dashDistance - _dampAfterDistance);
 
-            SetHorizontalVelocity(Vector3.zero);
+                    _currentDashSpeed = Mathf.Lerp(_dashStartSpeed, _dashEndSpeed, dampingRatio);
+                }
+
+                // Moving the character by currentSpeed in local forward direction
+                Move(_currentDashSpeed * _minTimeBetweenTicks * _transform.forward);
+                _traveledDistance += _currentDashSpeed * _minTimeBetweenTicks;
+
+                // Here we check if character will be further than it should be in the next ServerTick()
+                // And if it will be then we move it to targetPosition and exit the state
+                if (_traveledDistance + (_currentDashSpeed * _minTimeBetweenTicks) >= _dashDistance)
+                {
+                    Move(new Vector3(_targetPosition.x, _transform.position.y, _targetPosition.z) - _transform.position);
+                    _traveledDistance = _dashDistance;
+                    ExitDashState();
+                }
+            }
+        }
+
+        private void ExitDashState()
+        {
+            _isDashing = false;
             CurrentState = CharacterState.Idle;
         }
 
-        /// <summary>
-        /// Sets _velocity.x and _velocity.z from "velocity" parameter.
-        /// The _velocity.y is ignored.
-        /// </summary>
-        /// <param name="velocity">velocity</param>
-        protected void SetHorizontalVelocity(Vector3 velocity)
+        protected virtual void Move(Vector3 motion)
         {
-            _velocity.x = velocity.x;
-            _velocity.z = velocity.z;
+            _characterController.Move(motion);
         }
 
         protected bool IsGrounded()
@@ -422,7 +478,7 @@ namespace GameEngine.Core
             // Here instead of assigning _transform.position we should use _characterController.Move()
             //      Because _characterController overrides transform values
             //_transform.position = _latestServerState.position;
-            _characterController.Move(_latestServerState.position - _transform.position);
+            Move(_latestServerState.position - _transform.position);
 
             _stateBuffer[serverStateBufferIndex] = _latestServerState;
 
@@ -458,12 +514,6 @@ namespace GameEngine.Core
             if (isLocalPlayer) return;
 
             _transform.rotation = Quaternion.Euler(0, yRotation, 0);
-        }
-
-        [Command(requiresAuthority = false)]
-        private void CmdSetCurrentStateOnServer(CharacterState state)
-        {
-            CurrentState = state;
         }
     }
 }
