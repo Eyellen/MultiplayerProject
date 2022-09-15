@@ -18,20 +18,27 @@ namespace GameEngine.Core
             base.Start();
         }
 
-        protected override void HandleHorizontalMovement(Vector3 axis)
+        protected override InputMsg ProcessInput()
         {
-            if (axis.magnitude < 0.1) return;
+            InputMsg inputMsg = base.ProcessInput();
+            inputMsg.relativeToAngle = _cameraTransform.eulerAngles.y;
 
-            // Rotating character
-            float targetAngle = Mathf.Atan2(axis.x, axis.z) *
-                Mathf.Rad2Deg + _cameraTransform.eulerAngles.y;
+            return inputMsg;
+        }
 
+        protected override void HandleWalkState(InputMsg inputMsg)
+        {
+            // Finding input angle
+            float targetAngle = Mathf.Atan2(inputMsg.movementInput.x, inputMsg.movementInput.z) *
+                Mathf.Rad2Deg + inputMsg.relativeToAngle;
+
+            // Smoothly rotation character
             _transform.rotation = Quaternion.Lerp(_transform.rotation,
                 Quaternion.Euler(0, targetAngle, 0), _turnSmoothness * _minTimeBetweenTicks);
 
             // Rotating movement direction
             Vector3 moveDirection = Quaternion.Euler(0, targetAngle, 0) * Vector3.forward;
-            SetHorizontalVelocity(_movementSpeed * moveDirection);
+            Move(_movementSpeed * _minTimeBetweenTicks * moveDirection);
         }
     }
 }

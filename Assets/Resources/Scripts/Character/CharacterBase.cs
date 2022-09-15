@@ -10,6 +10,7 @@ namespace GameEngine.Core
     {
         public uint tick;
         public Vector3 movementInput;
+        public float relativeToAngle;
         public bool isDashPressed;
     }
 
@@ -165,12 +166,7 @@ namespace GameEngine.Core
 
                 uint bufferIndex = _currentTick % BUFFER_SIZE;
 
-                InputMsg inputMsg = new InputMsg();
-                {
-                    inputMsg.tick = _currentTick;
-                    inputMsg.movementInput = _movementInput;
-                    inputMsg.isDashPressed = _isDashPressed;
-                }
+                InputMsg inputMsg = ProcessInput();
                 _inputBuffer[bufferIndex] = inputMsg;
 
                 _stateBuffer[bufferIndex] = ProcessMovement(inputMsg);
@@ -233,6 +229,16 @@ namespace GameEngine.Core
         {
             _movementInput = default(Vector3);
             _isDashPressed = default(bool);
+        }
+
+        protected virtual InputMsg ProcessInput()
+        {
+            return new InputMsg
+            {
+                tick = _currentTick,
+                movementInput = _movementInput,
+                isDashPressed = _isDashPressed,
+            };
         }
 
         private StateMsg ProcessMovement(InputMsg inputMsg)
@@ -310,7 +316,7 @@ namespace GameEngine.Core
                             break;
                         }
 
-                        HandleWalkState(inputMsg.movementInput);
+                        HandleWalkState(inputMsg);
 
                         break;
                     }
@@ -340,9 +346,9 @@ namespace GameEngine.Core
             Move(new Vector3(0, _currentVerticalSpeed, 0));
         }
 
-        protected virtual void HandleWalkState(Vector3 movementInput)
+        protected virtual void HandleWalkState(InputMsg inputMsg)
         {
-            Move(_movementSpeed * _minTimeBetweenTicks * (_transform.rotation * movementInput));
+            Move(_movementSpeed * _minTimeBetweenTicks * (_transform.rotation * inputMsg.movementInput));
         }
 
         // Not suitable because can't sync Coroutines with ServerTick()
