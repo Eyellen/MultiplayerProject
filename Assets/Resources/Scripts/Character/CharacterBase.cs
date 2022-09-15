@@ -62,7 +62,7 @@ namespace GameEngine.Core
 
         [Header("Gravity Settings")]
         private float _gravity = 9.8f;
-        protected float CurrentVerticalSpeed { get; private set; }
+        private float _currentVerticalSpeed;
 
         #region Server and Client
         private float _timer;
@@ -310,7 +310,7 @@ namespace GameEngine.Core
                             break;
                         }
 
-                        Move(_movementSpeed * _minTimeBetweenTicks * (_transform.rotation * inputMsg.movementInput));
+                        HandleWalkState(inputMsg.movementInput);
 
                         break;
                     }
@@ -328,16 +328,21 @@ namespace GameEngine.Core
             }
         }
 
-        protected void HandleGravity()
+        private void HandleGravity()
         {
             if (IsGrounded())
             {
-                CurrentVerticalSpeed = 0;
+                _currentVerticalSpeed = 0;
                 return;
             }
 
-            CurrentVerticalSpeed -= _gravity * (_minTimeBetweenTicks * _minTimeBetweenTicks);
-            Move(new Vector3(0, CurrentVerticalSpeed, 0));
+            _currentVerticalSpeed -= _gravity * (_minTimeBetweenTicks * _minTimeBetweenTicks);
+            Move(new Vector3(0, _currentVerticalSpeed, 0));
+        }
+
+        protected virtual void HandleWalkState(Vector3 movementInput)
+        {
+            Move(_movementSpeed * _minTimeBetweenTicks * (_transform.rotation * movementInput));
         }
 
         // Not suitable because can't sync Coroutines with ServerTick()
@@ -367,7 +372,7 @@ namespace GameEngine.Core
         //            Debug.Log("Exit Dash state");
         //            yield break;
         //        }
-                    
+
 
         //        // Damping the speed after _dampAfterDistance
         //        if (traveledDistance > _dampAfterDistance)
@@ -445,7 +450,7 @@ namespace GameEngine.Core
             CurrentState = CharacterState.Idle;
         }
 
-        protected virtual void Move(Vector3 motion)
+        protected void Move(Vector3 motion)
         {
             _characterController.Move(motion);
         }
@@ -503,6 +508,8 @@ namespace GameEngine.Core
             //      Because it will interfere with the Client Prediction
             if (isLocalPlayer) return;
 
+            if (!_transform) return;
+
             _transform.position = position;
         }
 
@@ -512,6 +519,8 @@ namespace GameEngine.Core
             // Ignore this if we are local player
             //      Because it will interfere with the Client Prediction
             if (isLocalPlayer) return;
+
+            if (!_transform) return;
 
             _transform.rotation = Quaternion.Euler(0, yRotation, 0);
         }
