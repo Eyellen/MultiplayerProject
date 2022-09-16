@@ -17,8 +17,10 @@ namespace GameEngine.Core
         [SyncVar(hook = nameof(OnIsInvincibleUpdate))]
         private bool _isInvincible;
 
-        private void Start()
+        private void Awake()
         {
+            // Initialize normal material before _isInvincible will be synced
+            //      to prevent assigning wrong material
             _normalMaterial = gameObject.GetComponent<Renderer>().material;
         }
 
