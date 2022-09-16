@@ -51,7 +51,7 @@ namespace Mirror
             GUILayout.EndArea();
         }
 
-        void StartButtons()
+        protected virtual void StartButtons()
         {
             if (!NetworkClient.active)
             {
@@ -96,7 +96,7 @@ namespace Mirror
             }
         }
 
-        void StatusLabels()
+        protected virtual void StatusLabels()
         {
             // host mode
             // display separately because this always confused people:
