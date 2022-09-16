@@ -23,7 +23,15 @@ namespace GameEngine.Core
         [Command]
         private void CmdSetUsername(string username)
         {
-            Username = username;
+            PlayerInfo[] playerInfos = FindObjectsOfType<PlayerInfo>();
+            string[] otherNames = new string[playerInfos.Length];
+
+            for (int i = 0; i < playerInfos.Length; i++)
+            {
+                otherNames[i] = playerInfos[i].Username;
+            }
+
+            Username = ServerUsernameRequirements.GetUniqueUsername(username, otherNames);
         }
     }
 }
