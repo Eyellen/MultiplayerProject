@@ -117,6 +117,8 @@ GameObject:
   - component: {fileID: 8988851170231773846}
   - component: {fileID: 3518584886489293681}
   - component: {fileID: 38642740}
+  - component: {fileID: 133802530717566142}
+  - component: {fileID: 5675127536263960033}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -245,6 +247,32 @@ MonoBehaviour:
   _dampAfterDistance: 5
   _cameraTransform: {fileID: 8988851169881252823}
   _turnSmoothness: 15
+--- !u!114 &133802530717566142
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8988851170231773840}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9464a4e9b4e846847aea76bda9a4c863, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &5675127536263960033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8988851170231773840}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da5b5363eeef32c40848098c48a77d71, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _invincibleMaterial: {fileID: 2100000, guid: 9f66ee7c5de1cfd4cbe21a67c5c401c8, type: 2}
+  _invincibleRollbackTime: 3
 --- !u!1 &8988851171612307104
 GameObject:
   m_ObjectHideFlags: 0
