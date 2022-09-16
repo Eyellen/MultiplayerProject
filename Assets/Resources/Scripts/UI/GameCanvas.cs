@@ -1,7 +1,5 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
 using GameEngine.Core;
 using GameEngine.Patterns;
@@ -23,10 +21,10 @@ namespace GameEngine.UI
             while (NetworkClient.localPlayer == null)
                 yield return null;
 
-            NetworkClient.localPlayer.gameObject.GetComponent<CharacterHitter>().OnCharacterHit += ScorePoint;
+            NetworkClient.localPlayer.gameObject.GetComponent<PlayerStats>().OnScoreUpdate += ScorePoint;
         }
 
-        private void ScorePoint(int hitCount)
+        private void ScorePoint(byte hitCount)
         {
             _scoreCountText.text = hitCount.ToString();
         }
