@@ -8,10 +8,7 @@ namespace GameEngine.Core
     {
         private CharacterBase _characterBase;
 
-        [field: SyncVar]
-        public int TotalHits { get; private set; }
-
-        public event Action<int> OnCharacterHit;
+        public event Action OnCharacterHit;
 
         private void Start()
         {
@@ -28,15 +25,19 @@ namespace GameEngine.Core
             bool isSuccessful = hitable.Hit();
             if (!isSuccessful) return;
 
-            TotalHits++;
-            TargetOnCharacterHit(connectionToClient, TotalHits);
+            // Calling event on server
+            OnCharacterHit?.Invoke();
+            // Calling event on client that owns this character
+            // Don't call if this is local player because this player is also a server
+            //  And it can cause double calling event
+            if (!isLocalPlayer)
+                TargetOnCharacterHit(connectionToClient);
         }
 
         [TargetRpc]
-        private void TargetOnCharacterHit(NetworkConnection connection, int hitCount)
+        private void TargetOnCharacterHit(NetworkConnection connection)
         {
-            TotalHits = hitCount;
-            OnCharacterHit?.Invoke(hitCount);
+            OnCharacterHit?.Invoke();
         }
     }
 }
