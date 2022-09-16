@@ -253,7 +253,7 @@ namespace GameEngine.Core
         }
 
         #region Network Messages and Callbacks
-        [Command(requiresAuthority = false)]
+        [Command]
         private void CmdSendInputMsg(InputMsg inputMsg)
         {
             OnClientInput(inputMsg);
