@@ -72,7 +72,29 @@ namespace GameEngine.Core
             {
                 Transform startPoint = NetworkManager.singleton.GetStartPosition();
 
-                player.transform.position = startPoint.position;
+                // Need to move by character controller because it overrides transform.position
+                //player.transform.position = startPoint.position;
+                player.GetComponent<CharacterController>().Move(startPoint.position - player.transform.position);
+            }
+        }
+
+        [Server]
+        private IEnumerator RespawnAllPlayers()
+        {
+            // Destroying all characters
+            GameObject[] allPlayers = GameObject.FindGameObjectsWithTag("Player");
+            foreach (var player in allPlayers)
+            {
+                NetworkServer.Destroy(player);
+            }
+
+            // Waiting 1 frame till all player instance will be destroyed
+            yield return null;
+
+            // Spawning characters for each connection
+            foreach (var connection in NetworkServer.connections.Values)
+            {
+                NetworkManager.singleton.OnServerAddPlayer(connection);
             }
         }
     }
