@@ -1,10 +1,14 @@
 using UnityEngine;
 using GameEngine.User;
+using GameEngine.Core;
+using Mirror;
 
 namespace GameEngine.UI
 {
     public class NetworkManagerHUD : Mirror.NetworkManagerHUD
     {
+        private string _currentUsername = string.Empty;
+
         protected override void StartButtons()
         {
             base.StartButtons();
@@ -17,9 +21,18 @@ namespace GameEngine.UI
 
         protected override void StatusLabels()
         {
-            GUILayout.Label($"<b>Username:</b> {UserInfo.Username}");
+            _currentUsername = GetCurrentServerUsername();
+
+            GUILayout.Label($"<b>Username:</b> {_currentUsername}");
 
             base.StatusLabels();
+        }
+
+        private string GetCurrentServerUsername()
+        {
+            if (NetworkClient.localPlayer == null) return string.Empty;
+
+            return NetworkClient.localPlayer.gameObject.GetComponent<PlayerInfo>().Username;
         }
     }
 }
