@@ -29,6 +29,11 @@ namespace GameEngine.Core
 
     public class CharacterBase : NetworkBehaviour
     {
+#if UNITY_EDITOR
+        [SerializeField]
+        private bool _isDebugging = false;
+#endif
+
         protected Transform _transform;
         private CharacterController _characterController;
 
@@ -94,6 +99,8 @@ namespace GameEngine.Core
         private bool _isDashPressed;
         #endregion
 
+        private int _layer;
+
 #if UNITY_EDITOR
         private void OnValidate()
         {
@@ -103,6 +110,19 @@ namespace GameEngine.Core
 
             _dampAfterDistance = _dampAfterDistance > _dashDistance ? _dashDistance : _dampAfterDistance;
             _dampAfterDistance = _dampAfterDistance < 0 ? 0 : _dampAfterDistance;
+        }
+
+        private void OnDrawGizmos()
+        {
+            if (_isDebugging)
+            {
+                float sphereRadius = _characterController.radius;
+                Vector3 sphereCenter = _transform.position + (_characterController.center - Vector3.up * (_characterController.height / 2));
+                sphereCenter += Vector3.up * (sphereRadius - (_characterController.skinWidth + 0.01f));
+
+                Gizmos.color = Color.red;
+                Gizmos.DrawWireSphere(sphereCenter, sphereRadius);
+            }
         }
 #endif
 
@@ -114,6 +134,8 @@ namespace GameEngine.Core
 
         protected virtual void Start()
         {
+            _layer = 1 << LayerMask.NameToLayer("Player");
+
             _transform = GetComponent<Transform>();
             _characterController = GetComponent<CharacterController>();
 
@@ -463,13 +485,11 @@ namespace GameEngine.Core
 
         protected bool IsGrounded()
         {
-            Ray ray = new Ray
-            {
-                origin = _transform.position + (_characterController.center - Vector3.up * (_characterController.height / 2)),
-                direction = -Vector3.up
-            };
+            float sphereRadius = _characterController.radius;
+            Vector3 sphereCenter = _transform.position + (_characterController.center - Vector3.up * (_characterController.height / 2));
+            sphereCenter += Vector3.up * (sphereRadius - (_characterController.skinWidth + 0.01f));
 
-            return Physics.Raycast(ray, maxDistance: 0.05f);
+            return Physics.CheckSphere(sphereCenter, sphereRadius, ~_layer, QueryTriggerInteraction.Ignore);
         }
 
         [Client]
@@ -483,7 +503,10 @@ namespace GameEngine.Core
             if (positionError < 0.001f) return;
 
 #if UNITY_EDITOR
-            Debug.Log("Reconsiling!");
+            if (_isDebugging)
+            {
+                Debug.Log("Reconsiling!");
+            }
 #endif
 
             // Here instead of assigning _transform.position we should use _characterController.Move()
