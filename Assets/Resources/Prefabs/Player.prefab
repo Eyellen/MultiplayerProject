@@ -229,7 +229,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   syncMode: 0
   syncInterval: 0.1
+  _renderer: {fileID: 5925763104353474167}
+  _normalMaterial: {fileID: 2100000, guid: 0aa851515cd3747d6b3b3e461199a2ed, type: 2}
   _invincibleMaterial: {fileID: 2100000, guid: 9f66ee7c5de1cfd4cbe21a67c5c401c8, type: 2}
+  _normalColor: {r: 1, g: 1, b: 1, a: 1}
+  _invincibleColor: {r: 1, g: 0, b: 0, a: 1}
   _invincibleRollbackTime: 3
 --- !u!114 &-7751038245340771864
 MonoBehaviour:
@@ -348,5 +352,10 @@ Transform:
 --- !u!95 &1211734058920520309 stripped
 Animator:
   m_CorrespondingSourceObject: {fileID: -6057140222963153312, guid: 320b1c2af77554f99a1658df4a6d3d5c, type: 3}
+  m_PrefabInstance: {fileID: 4260483019950664725}
+  m_PrefabAsset: {fileID: 0}
+--- !u!137 &5925763104353474167 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -1649218382573798814, guid: 320b1c2af77554f99a1658df4a6d3d5c, type: 3}
   m_PrefabInstance: {fileID: 4260483019950664725}
   m_PrefabAsset: {fileID: 0}

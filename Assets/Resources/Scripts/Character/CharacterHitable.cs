@@ -6,10 +6,14 @@ namespace GameEngine.Core
 {
     public class CharacterHitable : NetworkBehaviour, IHitable
     {
-        private Material _normalMaterial;
+        [SerializeField]
+        private Renderer _renderer;
 
         [SerializeField]
-        private Material _invincibleMaterial;
+        private Color _normalColor = new Color(255, 255, 255);
+
+        [SerializeField]
+        private Color _invincibleColor = new Color(255, 0, 0);
 
         [SerializeField]
         private float _invincibleRollbackTime = 3f;
@@ -17,12 +21,15 @@ namespace GameEngine.Core
         [SyncVar(hook = nameof(OnIsInvincibleUpdate))]
         private bool _isInvincible;
 
-        private void Awake()
+#if UNITY_EDITOR
+        private void OnValidate()
         {
-            // Initialize normal material before _isInvincible will be synced
-            //      to prevent assigning wrong material
-            _normalMaterial = gameObject.GetComponent<Renderer>().material;
+            if (_renderer != null)
+            {
+                _normalColor = _renderer.sharedMaterial.color;
+            }
         }
+#endif
 
         public bool Hit()
         {
@@ -47,7 +54,7 @@ namespace GameEngine.Core
 
         private void OnIsInvincibleUpdate(bool oldValue, bool newValue)
         {
-            gameObject.GetComponent<Renderer>().material = newValue ? _invincibleMaterial : _normalMaterial;
+            _renderer.material.color = newValue ? _invincibleColor : _normalColor;
         }
     }
 }
