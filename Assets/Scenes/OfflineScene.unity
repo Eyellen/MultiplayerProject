@@ -419,7 +419,7 @@ MonoBehaviour:
   dontDestroyOnLoad: 1
   runInBackground: 1
   autoStartServerBuild: 1
-  serverTickRate: 30
+  serverTickRate: 66
   offlineScene: Assets/Scenes/OfflineScene.unity
   onlineScene: Assets/Scenes/OnlineScene.unity
   transport: {fileID: 1982127019}
