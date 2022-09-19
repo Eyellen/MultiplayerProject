@@ -6,31 +6,50 @@ using Mirror;
 
 namespace GameEngine.Core
 {
-    public struct InputMsg
-    {
-        public uint tick;
-        public Vector3 movementInput;
-        public float relativeToAngle;
-        public bool isDashPressed;
-    }
-
-    public struct StateMsg
-    {
-        public uint tick;
-        public Vector3 position;
-    }
-
-    public enum CharacterState
-    {
-        Idle,
-        Walk,
-        Dash
-    }
-
     public class CharacterBase : NetworkBehaviour
     {
+        #region NetworkMessage types
+        public struct InputMsg
+        {
+            public uint tick;
+            public Vector3 movementInput;
+            public float relativeToAngle;
+            public bool isDashPressed;
+        }
+
+        public struct StateMsg
+        {
+            public uint tick;
+            public Vector3 position;
+        }
+        #endregion
+
+        public enum CharacterState
+        {
+            Idle,
+            Fall,
+            Run,
+            Dash
+        }
+
+        private struct AnimatorStates
+        {
+            public static string FALL_KEYWORD = "IsFalling";
+            public static string RUN_KEYWORD = "IsRunning";
+            public static string DASH_KEYWORD = "IsDashing";
+        }
+
+#if UNITY_EDITOR
+        [SerializeField]
+        private bool _isDebugging = false;
+#endif
+
+        [Header("Components")]
         protected Transform _transform;
         private CharacterController _characterController;
+        
+        [SerializeField]
+        private Animator _animator;
 
         [field: SyncVar]
         public CharacterState CurrentState { get; private set; } = CharacterState.Idle;
@@ -94,6 +113,8 @@ namespace GameEngine.Core
         private bool _isDashPressed;
         #endregion
 
+        private int _layer;
+
 #if UNITY_EDITOR
         private void OnValidate()
         {
@@ -103,6 +124,19 @@ namespace GameEngine.Core
 
             _dampAfterDistance = _dampAfterDistance > _dashDistance ? _dashDistance : _dampAfterDistance;
             _dampAfterDistance = _dampAfterDistance < 0 ? 0 : _dampAfterDistance;
+        }
+
+        private void OnDrawGizmos()
+        {
+            if (_isDebugging)
+            {
+                float sphereRadius = _characterController.radius;
+                Vector3 sphereCenter = _transform.position + (_characterController.center - Vector3.up * (_characterController.height / 2));
+                sphereCenter += Vector3.up * (sphereRadius - (_characterController.skinWidth + 0.01f));
+
+                Gizmos.color = Color.red;
+                Gizmos.DrawWireSphere(sphereCenter, sphereRadius);
+            }
         }
 #endif
 
@@ -114,10 +148,13 @@ namespace GameEngine.Core
 
         protected virtual void Start()
         {
+            _layer = 1 << LayerMask.NameToLayer("Player");
+
             _transform = GetComponent<Transform>();
             _characterController = GetComponent<CharacterController>();
 
             _minTimeBetweenTicks = 1f / NetworkManager.singleton.serverTickRate;
+            syncInterval = _minTimeBetweenTicks;
 
             // No need to allocate memory for buffers if this is not local player or server
             if (!isLocalPlayer && !isServer) return;
@@ -153,7 +190,7 @@ namespace GameEngine.Core
         /// </summary>
         protected virtual void ServerTick()
         {
-            HandleGravity();
+            //HandleGravity();
 
             if (isLocalPlayer)
             {
@@ -287,32 +324,67 @@ namespace GameEngine.Core
             {
                 case CharacterState.Idle:
                     {
+                        if (!IsGrounded())
+                        {
+                            CurrentState = CharacterState.Fall;
+                            _animator.SetBool(AnimatorStates.FALL_KEYWORD, true);
+                            break;
+                        }
+
                         if (Mathf.Abs(inputMsg.movementInput.magnitude) >= 0.1)
                         {
-                            CurrentState = CharacterState.Walk;
+                            CurrentState = CharacterState.Run;
+                            _animator.SetBool(AnimatorStates.RUN_KEYWORD, true);
                             break;
                         }
 
                         if (inputMsg.isDashPressed)
                         {
                             CurrentState = CharacterState.Dash;
+                            _animator.SetBool(AnimatorStates.DASH_KEYWORD, true);
                             break;
                         }
 
                         break;
                     }
 
-                case CharacterState.Walk:
+                case CharacterState.Fall:
                     {
+                        if (IsGrounded())
+                        {
+                            CurrentState = CharacterState.Idle;
+                            _animator.SetBool(AnimatorStates.FALL_KEYWORD, false);
+                            _currentVerticalSpeed = 0;
+                            break;
+                        }
+
+                        HandleFallState();
+
+                        break;
+                    }
+
+                case CharacterState.Run:
+                    {
+                        if (!IsGrounded())
+                        {
+                            CurrentState = CharacterState.Fall;
+                            _animator.SetBool(AnimatorStates.RUN_KEYWORD, false);
+                            _animator.SetBool(AnimatorStates.FALL_KEYWORD, true);
+                            break;
+                        }
+
                         if (Mathf.Abs(inputMsg.movementInput.magnitude) < 0.1)
                         {
                             CurrentState = CharacterState.Idle;
+                            _animator.SetBool(AnimatorStates.RUN_KEYWORD, false);
                             break;
                         }
 
                         if (inputMsg.isDashPressed)
                         {
                             CurrentState = CharacterState.Dash;
+                            _animator.SetBool(AnimatorStates.RUN_KEYWORD, false);
+                            _animator.SetBool(AnimatorStates.DASH_KEYWORD, true);
                             break;
                         }
 
@@ -323,7 +395,16 @@ namespace GameEngine.Core
 
                 case CharacterState.Dash:
                     {
+                        if (!IsGrounded())
+                        {
+                            ExitDashState();
+                            _animator.SetBool(AnimatorStates.DASH_KEYWORD, false);
+                            _animator.SetBool(AnimatorStates.FALL_KEYWORD, true);
+                            break;
+                        }
+
                         HandleDashState();
+
                         break;
                     }
 
@@ -342,6 +423,12 @@ namespace GameEngine.Core
                 return;
             }
 
+            _currentVerticalSpeed -= _gravity * (_minTimeBetweenTicks * _minTimeBetweenTicks);
+            Move(new Vector3(0, _currentVerticalSpeed, 0));
+        }
+
+        private void HandleFallState()
+        {
             _currentVerticalSpeed -= _gravity * (_minTimeBetweenTicks * _minTimeBetweenTicks);
             Move(new Vector3(0, _currentVerticalSpeed, 0));
         }
@@ -454,6 +541,7 @@ namespace GameEngine.Core
         {
             _isDashing = false;
             CurrentState = CharacterState.Idle;
+            _animator.SetBool(AnimatorStates.DASH_KEYWORD, false);
         }
 
         protected void Move(Vector3 motion)
@@ -463,13 +551,11 @@ namespace GameEngine.Core
 
         protected bool IsGrounded()
         {
-            Ray ray = new Ray
-            {
-                origin = _transform.position + (_characterController.center - Vector3.up * (_characterController.height / 2)),
-                direction = -Vector3.up
-            };
+            float sphereRadius = _characterController.radius;
+            Vector3 sphereCenter = _transform.position + (_characterController.center - Vector3.up * (_characterController.height / 2));
+            sphereCenter += Vector3.up * (sphereRadius - (_characterController.skinWidth + 0.01f));
 
-            return Physics.Raycast(ray, maxDistance: 0.05f);
+            return Physics.CheckSphere(sphereCenter, sphereRadius, ~_layer, QueryTriggerInteraction.Ignore);
         }
 
         [Client]
@@ -483,7 +569,10 @@ namespace GameEngine.Core
             if (positionError < 0.001f) return;
 
 #if UNITY_EDITOR
-            Debug.Log("Reconsiling!");
+            if (_isDebugging)
+            {
+                Debug.Log("Reconsiling!");
+            }
 #endif
 
             // Here instead of assigning _transform.position we should use _characterController.Move()
