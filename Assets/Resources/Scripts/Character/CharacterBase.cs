@@ -129,12 +129,17 @@ namespace GameEngine.Core
         {
             if (_isDebugging)
             {
-                float sphereRadius = _characterController.radius;
-                Vector3 sphereCenter = _transform.position + (_characterController.center - Vector3.up * (_characterController.height / 2));
-                sphereCenter += Vector3.up * (sphereRadius - (_characterController.skinWidth + 0.01f));
+                float capsuleRadius = _characterController.radius;
+                Vector3 topSphere = _transform.position + _characterController.center;
+
+                float distanceToBottomSphereCenter = (_characterController.height / 2) + _characterController.skinWidth +
+                    _characterController.stepOffset - capsuleRadius;
+
+                Vector3 bottomSphere = _transform.position +
+                    (_characterController.center - Vector3.up * distanceToBottomSphereCenter);
 
                 Gizmos.color = Color.red;
-                Gizmos.DrawWireSphere(sphereCenter, sphereRadius);
+                GameEngine.Debugging.Gizmos.DrawWireCapsule(topSphere, bottomSphere, capsuleRadius);
             }
         }
 #endif
@@ -319,7 +324,7 @@ namespace GameEngine.Core
             {
                 case CharacterState.Idle:
                     {
-                        if (!IsGrounded())
+                        if (!IsGroundInStepReach())
                         {
                             CurrentState = CharacterState.Fall;
                             _animator.SetBool(AnimatorStates.FALL_KEYWORD, true);
@@ -345,7 +350,7 @@ namespace GameEngine.Core
 
                 case CharacterState.Fall:
                     {
-                        if (IsGrounded())
+                        if (_characterController.isGrounded)
                         {
                             CurrentState = CharacterState.Idle;
                             _animator.SetBool(AnimatorStates.FALL_KEYWORD, false);
@@ -360,7 +365,7 @@ namespace GameEngine.Core
 
                 case CharacterState.Run:
                     {
-                        if (!IsGrounded())
+                        if (!IsGroundInStepReach())
                         {
                             CurrentState = CharacterState.Fall;
                             _animator.SetBool(AnimatorStates.RUN_KEYWORD, false);
@@ -390,7 +395,7 @@ namespace GameEngine.Core
 
                 case CharacterState.Dash:
                     {
-                        if (!IsGrounded())
+                        if (!IsGroundInStepReach())
                         {
                             ExitDashState();
                             _animator.SetBool(AnimatorStates.DASH_KEYWORD, false);
@@ -408,11 +413,15 @@ namespace GameEngine.Core
                         break;
                     }
             }
+
+            // Simulating gravity pressure if not falling
+            if (CurrentState != CharacterState.Fall)
+                _characterController.Move(-Vector3.up * 0.1f);
         }
 
         private void HandleGravity()
         {
-            if (IsGrounded())
+            if (IsGroundInStepReach())
             {
                 _currentVerticalSpeed = 0;
                 return;
@@ -544,13 +553,24 @@ namespace GameEngine.Core
             _characterController.Move(motion);
         }
 
-        protected bool IsGrounded()
+        /// <summary>
+        /// This method is almost the same as CharacterController.isGrounded but 
+        /// it checks not if grounded but if ground is in CharacterController.stepOffset reach from 
+        /// CharacterController's bottom.
+        /// </summary>
+        /// <returns>True if ground is in step reach, False otherwise.</returns>
+        protected bool IsGroundInStepReach()
         {
-            float sphereRadius = _characterController.radius;
-            Vector3 sphereCenter = _transform.position + (_characterController.center - Vector3.up * (_characterController.height / 2));
-            sphereCenter += Vector3.up * (sphereRadius - (_characterController.skinWidth + 0.01f));
+            float capsuleRadius = _characterController.radius;
+            Vector3 topSphere = _transform.position + _characterController.center;
 
-            return Physics.CheckSphere(sphereCenter, sphereRadius, ~_layer, QueryTriggerInteraction.Ignore);
+            float distanceToBottomSphereCenter = (_characterController.height / 2) + _characterController.skinWidth +
+                _characterController.stepOffset - capsuleRadius;
+
+            Vector3 bottomSphere = _transform.position +
+                (_characterController.center - Vector3.up * distanceToBottomSphereCenter);
+
+            return Physics.CheckCapsule(topSphere, bottomSphere, capsuleRadius, ~_layer, QueryTriggerInteraction.Ignore);
         }
 
         [Client]
