@@ -6,36 +6,50 @@ using Mirror;
 
 namespace GameEngine.Core
 {
-    public struct InputMsg
-    {
-        public uint tick;
-        public Vector3 movementInput;
-        public float relativeToAngle;
-        public bool isDashPressed;
-    }
-
-    public struct StateMsg
-    {
-        public uint tick;
-        public Vector3 position;
-    }
-
-    public enum CharacterState
-    {
-        Idle,
-        Walk,
-        Dash
-    }
-
     public class CharacterBase : NetworkBehaviour
     {
+        #region NetworkMessage types
+        public struct InputMsg
+        {
+            public uint tick;
+            public Vector3 movementInput;
+            public float relativeToAngle;
+            public bool isDashPressed;
+        }
+
+        public struct StateMsg
+        {
+            public uint tick;
+            public Vector3 position;
+        }
+        #endregion
+
+        public enum CharacterState
+        {
+            Idle,
+            Fall,
+            Run,
+            Dash
+        }
+
+        private struct AnimatorStates
+        {
+            public static string FALL_KEYWORD = "IsFalling";
+            public static string RUN_KEYWORD = "IsRunning";
+            public static string DASH_KEYWORD = "IsDashing";
+        }
+
 #if UNITY_EDITOR
         [SerializeField]
         private bool _isDebugging = false;
 #endif
 
+        [Header("Components")]
         protected Transform _transform;
         private CharacterController _characterController;
+        
+        [SerializeField]
+        private Animator _animator;
 
         [field: SyncVar]
         public CharacterState CurrentState { get; private set; } = CharacterState.Idle;
@@ -311,30 +325,41 @@ namespace GameEngine.Core
                     {
                         if (Mathf.Abs(inputMsg.movementInput.magnitude) >= 0.1)
                         {
-                            CurrentState = CharacterState.Walk;
+                            CurrentState = CharacterState.Run;
+                            _animator.SetBool(AnimatorStates.RUN_KEYWORD, true);
                             break;
                         }
 
                         if (inputMsg.isDashPressed)
                         {
                             CurrentState = CharacterState.Dash;
+                            _animator.SetBool(AnimatorStates.DASH_KEYWORD, true);
                             break;
                         }
 
                         break;
                     }
 
-                case CharacterState.Walk:
+                case CharacterState.Fall:
+                    {
+
+                        break;
+                    }
+
+                case CharacterState.Run:
                     {
                         if (Mathf.Abs(inputMsg.movementInput.magnitude) < 0.1)
                         {
                             CurrentState = CharacterState.Idle;
+                            _animator.SetBool(AnimatorStates.RUN_KEYWORD, false);
                             break;
                         }
 
                         if (inputMsg.isDashPressed)
                         {
                             CurrentState = CharacterState.Dash;
+                            _animator.SetBool(AnimatorStates.RUN_KEYWORD, false);
+                            _animator.SetBool(AnimatorStates.DASH_KEYWORD, true);
                             break;
                         }
 
@@ -476,6 +501,7 @@ namespace GameEngine.Core
         {
             _isDashing = false;
             CurrentState = CharacterState.Idle;
+            _animator.SetBool(AnimatorStates.DASH_KEYWORD, false);
         }
 
         protected void Move(Vector3 motion)
