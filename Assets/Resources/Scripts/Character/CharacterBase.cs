@@ -109,7 +109,6 @@ namespace GameEngine.Core
         #endregion
 
         #region Inputs
-        private Vector3 _movementInput;
         private bool _isDashPressed;
         #endregion
 
@@ -254,9 +253,6 @@ namespace GameEngine.Core
         [Client]
         private void HandleInputs()
         {
-            if (Mathf.Abs(Input.MovementVector.magnitude) >= 0.1)
-                _movementInput = Input.MovementVector;
-
             if (Input.IsDashPressed)
                 _isDashPressed = true;
         }
@@ -264,7 +260,6 @@ namespace GameEngine.Core
         [Client]
         private void ResetInputs()
         {
-            _movementInput = default(Vector3);
             _isDashPressed = default(bool);
         }
 
@@ -273,7 +268,7 @@ namespace GameEngine.Core
             return new InputMsg
             {
                 tick = _currentTick,
-                movementInput = _movementInput,
+                movementInput = Input.MovementVector,
                 isDashPressed = _isDashPressed,
             };
         }
