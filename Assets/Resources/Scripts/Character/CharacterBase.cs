@@ -154,6 +154,7 @@ namespace GameEngine.Core
             _characterController = GetComponent<CharacterController>();
 
             _minTimeBetweenTicks = 1f / NetworkManager.singleton.serverTickRate;
+            syncInterval = _minTimeBetweenTicks;
 
             // No need to allocate memory for buffers if this is not local player or server
             if (!isLocalPlayer && !isServer) return;
