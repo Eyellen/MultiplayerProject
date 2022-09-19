@@ -189,7 +189,7 @@ namespace GameEngine.Core
         /// </summary>
         protected virtual void ServerTick()
         {
-            HandleGravity();
+            //HandleGravity();
 
             if (isLocalPlayer)
             {
@@ -323,6 +323,13 @@ namespace GameEngine.Core
             {
                 case CharacterState.Idle:
                     {
+                        if (!IsGrounded())
+                        {
+                            CurrentState = CharacterState.Fall;
+                            _animator.SetBool(AnimatorStates.FALL_KEYWORD, true);
+                            break;
+                        }
+
                         if (Mathf.Abs(inputMsg.movementInput.magnitude) >= 0.1)
                         {
                             CurrentState = CharacterState.Run;
@@ -342,12 +349,29 @@ namespace GameEngine.Core
 
                 case CharacterState.Fall:
                     {
+                        if (IsGrounded())
+                        {
+                            CurrentState = CharacterState.Idle;
+                            _animator.SetBool(AnimatorStates.FALL_KEYWORD, false);
+                            _currentVerticalSpeed = 0;
+                            break;
+                        }
+
+                        HandleFallState();
 
                         break;
                     }
 
                 case CharacterState.Run:
                     {
+                        if (!IsGrounded())
+                        {
+                            CurrentState = CharacterState.Fall;
+                            _animator.SetBool(AnimatorStates.RUN_KEYWORD, false);
+                            _animator.SetBool(AnimatorStates.FALL_KEYWORD, true);
+                            break;
+                        }
+
                         if (Mathf.Abs(inputMsg.movementInput.magnitude) < 0.1)
                         {
                             CurrentState = CharacterState.Idle;
@@ -370,7 +394,16 @@ namespace GameEngine.Core
 
                 case CharacterState.Dash:
                     {
+                        if (!IsGrounded())
+                        {
+                            ExitDashState();
+                            _animator.SetBool(AnimatorStates.DASH_KEYWORD, false);
+                            _animator.SetBool(AnimatorStates.FALL_KEYWORD, true);
+                            break;
+                        }
+
                         HandleDashState();
+
                         break;
                     }
 
@@ -389,6 +422,12 @@ namespace GameEngine.Core
                 return;
             }
 
+            _currentVerticalSpeed -= _gravity * (_minTimeBetweenTicks * _minTimeBetweenTicks);
+            Move(new Vector3(0, _currentVerticalSpeed, 0));
+        }
+
+        private void HandleFallState()
+        {
             _currentVerticalSpeed -= _gravity * (_minTimeBetweenTicks * _minTimeBetweenTicks);
             Move(new Vector3(0, _currentVerticalSpeed, 0));
         }
