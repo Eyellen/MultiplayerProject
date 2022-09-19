@@ -18,7 +18,7 @@ namespace GameEngine.Core
         [ServerCallback]
         private void OnControllerColliderHit(ControllerColliderHit hit)
         {
-            if (_characterBase.CurrentState != CharacterState.Dash) return;
+            if (_characterBase.CurrentState != CharacterBase.CharacterState.Dash) return;
 
             if (!hit.gameObject.TryGetComponent(out IHitable hitable)) return;
 
