@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 8988851169881252823}
   - component: {fileID: 8988851169881252816}
   - component: {fileID: 8988851169881252817}
-  - component: {fileID: 8988851169881252822}
   m_Layer: 6
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -84,25 +83,6 @@ AudioListener:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8988851169881252818}
   m_Enabled: 1
---- !u!114 &8988851169881252822
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8988851169881252818}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2acc9a0743048b44c8fb19cbc0de9c4d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _debugging: 0
-  _sensitivity: {x: 1, y: 1}
-  <yMaxRotation>k__BackingField: -90
-  <yMinRotation>k__BackingField: 40
-  _target: {fileID: 8988851170231773850}
-  _cameraOffset: {x: 0, y: 0.4, z: -5}
-  _cameraThickness: 0.25
 --- !u!1 &8988851170231773840
 GameObject:
   m_ObjectHideFlags: 0
@@ -114,12 +94,14 @@ GameObject:
   - component: {fileID: 8988851170231773850}
   - component: {fileID: 8988851170231773846}
   - component: {fileID: 3518584886489293681}
+  - component: {fileID: 4668985524944353083}
   - component: {fileID: 38642740}
   - component: {fileID: 133802530717566142}
   - component: {fileID: 5675127536263960033}
   - component: {fileID: -7751038245340771864}
   - component: {fileID: 1745008358127035071}
   - component: {fileID: 7021663933412893099}
+  - component: {fileID: 8317143014057157752}
   m_Layer: 6
   m_Name: Player
   m_TagString: Player
@@ -178,6 +160,28 @@ MonoBehaviour:
   visible: 0
   m_AssetId: ecbe7501fa19be047aaad54597d4ae08
   hasSpawned: 0
+--- !u!114 &4668985524944353083
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8988851170231773840}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2acc9a0743048b44c8fb19cbc0de9c4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncMode: 0
+  syncInterval: 0.1
+  _debugging: 0
+  _cameraTransform: {fileID: 8988851169881252823}
+  _sensitivity: {x: 1, y: 1}
+  <yMaxRotation>k__BackingField: -90
+  <yMinRotation>k__BackingField: 40
+  _target: {fileID: 8988851170231773850}
+  _cameraOffset: {x: 0, y: 0.4, z: -5}
+  _cameraThickness: 0.25
 --- !u!114 &38642740
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -230,8 +234,6 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0.1
   _renderer: {fileID: 5925763104353474167}
-  _normalMaterial: {fileID: 2100000, guid: 0aa851515cd3747d6b3b3e461199a2ed, type: 2}
-  _invincibleMaterial: {fileID: 2100000, guid: 9f66ee7c5de1cfd4cbe21a67c5c401c8, type: 2}
   _normalColor: {r: 1, g: 1, b: 1, a: 1}
   _invincibleColor: {r: 1, g: 0, b: 0, a: 1}
   _invincibleRollbackTime: 3
@@ -279,6 +281,24 @@ MonoBehaviour:
   syncInterval: 0.1
   clientAuthority: 1
   animator: {fileID: 1211734058920520309}
+--- !u!114 &8317143014057157752
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8988851170231773840}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e16ee0bc57a3e44eb9d05605caa404f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncMode: 0
+  syncInterval: 0.1
+  _playerFloatingInfoPrefab: {fileID: 6249638787277432108, guid: 9fcf289bebb0b4e49953dc7c75dc93ce, type: 3}
+  _visibleDistance: 10
+  _verticalOffset: 1.1
+  _isShowOnSelf: 0
 --- !u!1001 &4260483019950664725
 PrefabInstance:
   m_ObjectHideFlags: 0
