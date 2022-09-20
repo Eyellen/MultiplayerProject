@@ -6,8 +6,8 @@ namespace GameEngine.Core
 {
     public class PlayerStats : NetworkBehaviour
     {
-        [SyncVar(hook = nameof(OnScoreUpdateHook))]
-        private byte _score;
+        [field: SyncVar(hook = nameof(OnScoreUpdateHook))]
+        public byte Score { get; private set; }
 
         public event Action<byte> OnScoreUpdate;
 
@@ -30,8 +30,8 @@ namespace GameEngine.Core
         [ServerCallback]
         public void ScorePoint()
         {
-            _score++;
-            StaticOnScorePoint?.Invoke(gameObject, _score);
+            Score++;
+            StaticOnScorePoint?.Invoke(gameObject, Score);
         }
 
         private void OnScoreUpdateHook(byte oldValue, byte newValue)
@@ -49,7 +49,7 @@ namespace GameEngine.Core
 
             foreach (var stats in allStats)
             {
-                stats._score = default(byte);
+                stats.Score = default(byte);
             }
         }
     }

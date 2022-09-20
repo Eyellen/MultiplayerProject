@@ -1,3 +1,5 @@
+using System;
+using UnityEngine;
 using Mirror;
 using GameEngine.User;
 
@@ -8,11 +10,29 @@ namespace GameEngine.Core
         [field: SyncVar(hook = nameof(OnUsernameUpdateHook))]
         public string Username { get; private set; }
 
+        public static event Action<PlayerInfo> OnPlayerStart;
+        public static event Action<PlayerInfo> OnPlayerDestroy;
+
         private void Start()
         {
-            if (!isLocalPlayer) return;
+            OnPlayerStart?.Invoke(this);
 
-            CmdSetUsername(UserInfo.Username);
+            if(isLocalPlayer)
+            {
+                CmdSetUsername(UserInfo.Username);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            OnPlayerDestroy?.Invoke(this);
+
+            // Clear static event from all subscriptions
+            if (FindObjectsOfType<PlayerInfo>().Length == 0)
+            {
+                OnPlayerStart = null;
+                OnPlayerDestroy = null;
+            }
         }
 
         private void OnUsernameUpdateHook(string oldValue, string newValue)
