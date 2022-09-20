@@ -13,6 +13,8 @@ namespace GameEngine.Core
         public static event Action<PlayerInfo> OnPlayerStart;
         public static event Action<PlayerInfo> OnPlayerDestroy;
 
+        public event Action<string> OnUsernameUpdate;
+
         private void Start()
         {
             OnPlayerStart?.Invoke(this);
@@ -38,6 +40,7 @@ namespace GameEngine.Core
         private void OnUsernameUpdateHook(string oldValue, string newValue)
         {
             Username = newValue;
+            OnUsernameUpdate?.Invoke(Username);
         }
 
         [Command]

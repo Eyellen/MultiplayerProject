@@ -1,4 +1,5 @@
 using UnityEngine;
+using Mirror;
 
 namespace GameEngine.Core
 {
@@ -25,13 +26,13 @@ namespace GameEngine.Core
             _layer = 1 << LayerMask.NameToLayer("Player");
         }
 
-        protected virtual void Start()
+        public override void OnStartClient()
         {
             // Disabling camera if it's not local player's camera
-            if (!_target.GetComponent<CharacterBase>().isLocalPlayer)
+            if (!isLocalPlayer)
             {
-                gameObject.tag = "Untagged";
-                gameObject.SetActive(false);
+                _cameraTransform.tag = "Untagged";
+                _cameraTransform.gameObject.SetActive(false);
             }
         }
 
@@ -47,7 +48,7 @@ namespace GameEngine.Core
         {
             base.HandleRotation();
 
-            _currentCameraOffset = _transform.rotation * _cameraOffset;
+            _currentCameraOffset = _cameraTransform.rotation * _cameraOffset;
         }
 
         private void HandleOffsetMagnitude()
@@ -62,7 +63,7 @@ namespace GameEngine.Core
 
         private void HandleFollowing()
         {
-            _transform.position = _target.position + _currentCameraOffset;
+            _cameraTransform.position = _target.position + _currentCameraOffset;
 
 #if UNITY_EDITOR || DEBUG_BUILD
             if (_debugging)

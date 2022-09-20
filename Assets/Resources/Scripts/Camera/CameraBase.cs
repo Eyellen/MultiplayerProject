@@ -1,16 +1,18 @@
 using UnityEngine;
+using Mirror;
 using Input = GameEngine.UserInput.Input;
 
 namespace GameEngine.Core
 {
-    public class CameraBase : MonoBehaviour
+    public class CameraBase : NetworkBehaviour
     {
 #if UNITY_EDITOR || DEBUG_BUILD
         [SerializeField]
         protected bool _debugging = false;
 #endif
 
-        protected Transform _transform;
+        [SerializeField]
+        protected Transform _cameraTransform;
 
         [SerializeField]
         protected Vector2 _sensitivity = new Vector2(1, 1);
@@ -27,8 +29,6 @@ namespace GameEngine.Core
         {
             XRotation = transform.rotation.eulerAngles.y;
             YRotation = -transform.rotation.eulerAngles.x;
-
-            _transform = GetComponent<Transform>();
         }
 
         protected virtual void LateUpdate()
@@ -44,7 +44,7 @@ namespace GameEngine.Core
             YRotation = Mathf.Clamp(YRotation, yMaxRotation, yMinRotation);
             Quaternion rotation = Quaternion.Euler(-YRotation, XRotation, 0);
 
-            _transform.rotation = rotation;
+            _cameraTransform.rotation = rotation;
         }
     }
 }
