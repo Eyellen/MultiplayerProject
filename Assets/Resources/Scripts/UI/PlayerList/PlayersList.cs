@@ -49,7 +49,8 @@ namespace GameEngine.UI
 
         private void RemovePlayerFromList(PlayerInfo playerInfo)
         {
-            Destroy(_playerBars[playerInfo].gameObject);
+            if (_playerBars[playerInfo] != null)
+                Destroy(_playerBars[playerInfo].gameObject);
             _playerBars.Remove(playerInfo);
         }
 
