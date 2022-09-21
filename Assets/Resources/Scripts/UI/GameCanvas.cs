@@ -1,9 +1,7 @@
-using System.Collections;
 using UnityEngine;
 using TMPro;
 using GameEngine.Core;
 using GameEngine.Patterns;
-using Mirror;
 
 namespace GameEngine.UI
 {
@@ -14,19 +12,30 @@ namespace GameEngine.UI
         [SerializeField]
         private TextMeshProUGUI _scoreCountText;
 
-        private IEnumerator Start()
+        private void Start()
         {
             Singleton.Initialize(this);
 
-            while (NetworkClient.localPlayer == null)
-                yield return null;
-
-            NetworkClient.localPlayer.gameObject.GetComponent<PlayerStats>().OnScoreUpdate += ScorePoint;
+            PlayerInfo.OnPlayerStart += OnPlayerStart; 
         }
 
         private void ScorePoint(byte hitCount)
         {
             _scoreCountText.text = hitCount.ToString();
+        }
+
+        private void OnPlayerStart(PlayerInfo playerInfo)
+        {
+            // Do nothing if this is not local player
+            if (!playerInfo.isLocalPlayer) return;
+
+            PlayerStats playerStats = playerInfo.gameObject.GetComponent<PlayerStats>();
+
+            // Initialize event to display player's scores
+            playerStats.OnScoreUpdate += ScorePoint;
+
+            // Set current player's score
+            ScorePoint(playerStats.Score);
         }
     }
 }

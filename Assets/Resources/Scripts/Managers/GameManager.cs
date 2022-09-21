@@ -58,8 +58,7 @@ namespace GameEngine.Core
         [Server]
         private void RestartGame()
         {
-            PlayerStats.ResetAllScores();
-            RelocateAllPlayers();
+            StartCoroutine(RespawnAllPlayers());
             IsGameOn = true;
         }
 

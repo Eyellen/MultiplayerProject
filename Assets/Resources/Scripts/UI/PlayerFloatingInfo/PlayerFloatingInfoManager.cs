@@ -55,7 +55,8 @@ namespace GameEngine.UI
 
         private void OnDestroy()
         {
-            Destroy(_playerFloatingInfo.gameObject);
+            if (_playerFloatingInfo != null)
+                Destroy(_playerFloatingInfo.gameObject);
         }
 
         private void CheckIfNeedToShowOrHide()
