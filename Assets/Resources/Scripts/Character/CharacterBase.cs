@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Input = GameEngine.UserInput.Input;
@@ -188,8 +187,6 @@ namespace GameEngine.Core
         /// </summary>
         protected virtual void ServerTick()
         {
-            //HandleGravity();
-
             if (isLocalPlayer)
             {
                 if (!_latestServerState.Equals(default(StateMsg)) &&
@@ -435,65 +432,6 @@ namespace GameEngine.Core
         {
             Move(_movementSpeed * _minTimeBetweenTicks * (_transform.rotation * inputMsg.movementInput));
         }
-
-        // Not suitable because can't sync Coroutines with ServerTick()
-        //private IEnumerator HandleDashCoroutine()
-        //{
-        //    CurrentState = CharacterState.Dash;
-        //    uint tick = 0;
-
-        //    Vector3 targetPosition = _transform.position + _transform.forward * _dashDistance;
-
-        //    float traveledDistance;
-        //    float currentSpeed = _dashStartSpeed;
-
-        //    for (traveledDistance = 0; traveledDistance < _dashDistance; /*traveledDistance += currentSpeed * _minTimeBetweenTicks*/)
-        //    {
-        //        // Here we wait for next server tick
-        //        while (tick == _currentTick)
-        //        {
-        //            yield return null;
-        //        }
-
-        //        tick = _currentTick;
-
-        //        // Exit the coroutine if character is no longer in Dash state
-        //        if (CurrentState != CharacterState.Dash)
-        //        {
-        //            Debug.Log("Exit Dash state");
-        //            yield break;
-        //        }
-
-
-        //        // Damping the speed after _dampAfterDistance
-        //        if (traveledDistance > _dampAfterDistance)
-        //        {
-        //            float dampingRatio = (traveledDistance - _dampAfterDistance) / (_dashDistance - _dampAfterDistance);
-
-        //            currentSpeed = Mathf.Lerp(_dashStartSpeed, _dashEndSpeed, dampingRatio);
-        //        }
-
-        //        // Moving the character by currentSpeed in local forward direction
-        //        Move(currentSpeed * _minTimeBetweenTicks * _transform.forward);
-        //        traveledDistance += currentSpeed * _minTimeBetweenTicks;
-        //        Debug.Log($"Traveled in this server tick: {traveledDistance - currentSpeed * _minTimeBetweenTicks}");
-
-        //        //// Waiting for _minTimeBetweenTicks because our movement should execute in sync with ServerTick()
-        //        //yield return new WaitForSeconds(_minTimeBetweenTicks);
-
-        //        // Here we check if character will be further than it should be in the next ServerTick()
-        //        // And if he will be then we move him to targetPosition and exit the loop
-        //        if (traveledDistance + (currentSpeed * _minTimeBetweenTicks) > _dashDistance)
-        //        {
-        //            Move(targetPosition - _transform.position);
-        //            traveledDistance = _dashDistance;
-        //        }
-
-        //        //yield return null;
-        //    }
-
-        //    CurrentState = CharacterState.Idle;
-        //}
 
         private bool _isDashing;
         private Vector3 _targetPosition;

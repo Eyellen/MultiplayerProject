@@ -63,21 +63,6 @@ namespace GameEngine.Core
         }
 
         [Server]
-        private void RelocateAllPlayers()
-        {
-            GameObject[] allPlayers = GameObject.FindGameObjectsWithTag("Player");
-
-            foreach (var player in allPlayers)
-            {
-                Transform startPoint = NetworkManager.singleton.GetStartPosition();
-
-                // Need to move by character controller because it overrides transform.position
-                //player.transform.position = startPoint.position;
-                player.GetComponent<CharacterController>().Move(startPoint.position - player.transform.position);
-            }
-        }
-
-        [Server]
         private IEnumerator RespawnAllPlayers()
         {
             // Destroying all characters
