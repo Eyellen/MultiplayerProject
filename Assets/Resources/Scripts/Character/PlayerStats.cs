@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Mirror;
 
 namespace GameEngine.Core
@@ -16,15 +17,17 @@ namespace GameEngine.Core
         private void Start()
         {
             GetComponent<CharacterHitter>().OnCharacterHit += ScorePoint;
+            SceneManager.sceneUnloaded += ResetStaticEventsOnSceneUnload;
         }
 
-        private void OnDestroy()
+        private void ResetStaticEventsOnSceneUnload(Scene loadedScene)
         {
-            // Reset static event because otherwise it will cause errors
-            // Resets only if there is no instances of PlayerStats on scene
-            //      Because otherwise it will unsubscribe existing instances
-            if (FindObjectsOfType<PlayerStats>().Length == 0)
-                StaticOnScorePoint = null;
+            // Reset static events when scene is unloaded
+            // Because otherwise it will cause errors
+            StaticOnScorePoint = null;
+
+            // Unsubscribe this method from static event SceneManager.sceneUnloaded after work is done
+            SceneManager.sceneUnloaded -= ResetStaticEventsOnSceneUnload;
         }
 
         [ServerCallback]
