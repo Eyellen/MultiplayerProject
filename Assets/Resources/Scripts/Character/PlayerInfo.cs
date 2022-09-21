@@ -1,5 +1,5 @@
 using System;
-using UnityEngine;
+using UnityEngine.SceneManagement;
 using Mirror;
 using GameEngine.User;
 
@@ -18,6 +18,7 @@ namespace GameEngine.Core
         private void Start()
         {
             OnPlayerStart?.Invoke(this);
+            SceneManager.sceneUnloaded += ResetStaticEventsOnSceneUnload;
 
             if(isLocalPlayer)
             {
@@ -28,13 +29,17 @@ namespace GameEngine.Core
         private void OnDestroy()
         {
             OnPlayerDestroy?.Invoke(this);
+        }
 
-            // Clear static event from all subscriptions
-            if (FindObjectsOfType<PlayerInfo>().Length == 0)
-            {
-                OnPlayerStart = null;
-                OnPlayerDestroy = null;
-            }
+        private void ResetStaticEventsOnSceneUnload(Scene unloadedScene)
+        {
+            // Reset static events when scene is unloaded
+            // Because otherwise it will cause errors
+            OnPlayerStart = null;
+            OnPlayerDestroy = null;
+
+            // Unsubscribe this method from static event SceneManager.sceneUnloaded after work is done
+            SceneManager.sceneUnloaded -= ResetStaticEventsOnSceneUnload;
         }
 
         private void OnUsernameUpdateHook(string oldValue, string newValue)
