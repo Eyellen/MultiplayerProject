@@ -144,12 +144,6 @@ namespace GameEngine.Core
         }
 #endif
 
-        public override void OnStartClient()
-        {
-            // Assigning timer to be in sync with server
-            _timer = (float)NetworkTime.time;
-        }
-
         protected virtual void Start()
         {
             _layer = 1 << LayerMask.NameToLayer("Player");
